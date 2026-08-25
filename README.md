@@ -1,36 +1,218 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bayview CRM
 
-## Getting Started
+A production-ready CRM application for Bayview Village Ltd (hospitality/hotel management) built with Next.js 16, TypeScript, PostgreSQL, Prisma 7, Tailwind CSS, shadcn/ui, and NextAuth v5.
 
-First, run the development server:
+## Features
+
+- **Dashboard** — Key metrics, recent leads, bookings, payments, follow-ups, lead source summary
+- **Customer Management** — CRUD, search, activity history, linked bookings
+- **Lead Management** — Pipeline view, status workflow, assignment, UTM tracking
+- **Follow-ups & Activities** — Timeline, activity logging, follow-up scheduling with overdue tracking
+- **Booking Management** — CRUD, status workflow, date filtering
+- **Payment Management** — CRUD, status tracking, linked to bookings
+- **Public Lead Capture** — Public form with honeypot spam protection, rate limiting, UTM extraction
+- **Notifications** — Real-time bell with unread count, event-triggered notifications
+- **Reports** — 9 report types with date range filtering (leads by source/campaign/service/staff, conversion rate, bookings, payments, revenue, follow-up performance)
+- **Audit Logging** — Full audit trail of all CRM mutations, admin-only viewer
+- **Role-Based Access** — ADMIN, MANAGER, STAFF roles
+
+## Tech Stack
+
+- **Framework:** Next.js 16.3.2 (App Router, Turbopack)
+- **Language:** TypeScript
+- **Database:** PostgreSQL via Prisma 7.9.1
+- **Auth:** NextAuth v5 (JWT strategy, Credentials provider)
+- **UI:** Tailwind CSS 4 + shadcn/ui (base-nova style)
+- **Validation:** Zod 4
+- **Password Hashing:** bcryptjs (12 rounds)
+
+## Prerequisites
+
+- Node.js 20+
+- PostgreSQL database
+- Railway account (for deployment)
+
+## Local Development
+
+### 1. Clone and install
+
+```bash
+git clone <repo-url>
+cd bayview-hotel
+npm install
+```
+
+### 2. Set up environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your local PostgreSQL connection string:
+
+```
+DATABASE_URL="postgresql://user:password@localhost:5432/bayview_crm?schema=public"
+AUTH_SECRET="<generate-a-random-secret>"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+Generate an AUTH_SECRET:
+
+```bash
+npx auth secret
+# or
+openssl rand -base64 32
+```
+
+### 3. Set up database
+
+```bash
+npx prisma db push
+npx prisma db seed
+```
+
+### 4. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Default Login
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+After seeding, register an admin user:
 
-## Learn More
+1. Navigate to `/auth/register` (requires admin approval — see below)
+2. Or use `npx prisma db seed` which creates default lookup data
 
-To learn more about Next.js, take a look at the following resources:
+To create an admin user manually via Prisma Studio:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx prisma studio
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create a User record with role `ADMIN` and a bcrypt-hashed password.
 
-## Deploy on Vercel
+## Deployment to Railway
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Create Railway project
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login
+railway login
+
+# Create project
+railway init
+```
+
+### 2. Add PostgreSQL
+
+```bash
+railway add --plugin postgresql
+```
+
+This automatically sets the `DATABASE_URL` environment variable.
+
+### 3. Set environment variables
+
+In the Railway dashboard or via CLI:
+
+```bash
+railway variables set AUTH_SECRET="<your-generated-secret>"
+railway variables set NEXTAUTH_URL="https://<your-app-name>.railway.app"
+```
+
+**Never commit `.env` files with real credentials.**
+
+### 4. Deploy
+
+```bash
+railway up
+```
+
+Or connect your GitHub repo for automatic deployments.
+
+### 5. Run migrations and seed
+
+After first deploy, run in Railway's shell or via CLI:
+
+```bash
+railway run npx prisma migrate deploy
+railway run npx prisma db seed
+```
+
+### 6. Health check
+
+The app exposes a health endpoint at `/api/health` for Railway's healthcheck configuration.
+
+Set the healthcheck path in Railway service settings:
+```
+/api/health
+```
+
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run db:push` | Push schema to database (dev) |
+| `npm run db:migrate` | Create migration (dev) |
+| `npm run db:deploy` | Deploy migrations (production) |
+| `npm run db:seed` | Seed lookup data |
+| `npm run db:studio` | Open Prisma Studio |
+| `npm run db:generate` | Regenerate Prisma Client |
+
+## Project Structure
+
+```
+src/
+  app/
+    api/           # API routes (authenticated)
+      audit/       # Audit log viewer (admin-only)
+      auth/        # NextAuth + registration
+      bookings/    # Booking CRUD
+      customers/   # Customer CRUD
+      follow-ups/  # Follow-up CRUD
+      health/      # Health check endpoint
+      leads/       # Lead CRUD + status + assignment
+      notifications/ # Notification CRUD
+      payments/    # Payment CRUD
+      public/      # Public endpoints (no auth)
+      reports/     # Reporting endpoints (admin-only)
+    auth/          # Login/register pages
+    dashboard/     # Dashboard pages
+    lead-capture/  # Public lead capture form
+  components/      # React components
+  lib/             # Shared utilities
+    audit.ts       # Audit logging
+    auth.ts        # NextAuth configuration
+    auth.config.ts # Edge auth config
+    auth-helpers.ts # requireAuth/requireAdmin
+    notifications.ts # Notification helpers
+    prisma.ts      # Prisma client singleton
+    queries/       # Database query functions
+    validations/   # Zod schemas
+  proxy.ts         # Route protection middleware
+prisma/
+  schema.prisma    # Database schema
+  seed.ts          # Seed script
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `AUTH_SECRET` | Yes | NextAuth JWT secret (min 32 chars) |
+| `NEXTAUTH_URL` | Yes | Application URL (http://localhost:3000 for dev) |
+
+## License
+
+Private — Bayview Village Ltd.

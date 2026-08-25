@@ -1,0 +1,483 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  ONLINE
+  OTHER
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+  PHONE
+  IN_PERSON
+  OTHER
+}
+
+enum ActivityType {
+  CALL
+  WHATSAPP
+  SMS
+  EMAIL
+  MEETING
+  NOTE
+  QUOTE
+  PROPERTY_VISIT
+  OTHER
+}
+
+// ─── Auth (NextAuth) ─────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  roleId        String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  role          Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  accounts      Account[]
+  sessions      Session[]
+  assignedLeads Lead[]     @relation("LeadAssignee")
+  activities    Activity[]
+  followUps     FollowUp[] @relation("FollowUpAssignee")
+  bookings      Booking[]  @relation("BookingCreator")
+  assignedBookings Booking[] @relation("BookingAssignee")
+  sentMessages  Message[]  @relation("MessageSender")
+  assignedMessages Message[] @relation("MessageAssignee")
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  assignedCustomers Customer[] @relation("CustomerAssignee")
+  createdCampaigns Campaign[] @relation("CampaignCreator")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── RBAC ───────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  viewAllData Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  key         String @unique // e.g. "leads.create"
+  module      String // e.g. "leads"
+  action      String // e.g. "create"
+  description String?
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+// ─── Lookup Tables ───────────────────────────────────
+
+model LeadSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  leads Lead[]
+}
+
+model LeadStatus {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  leads Lead[]
+}
+
+model Service {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  category    String?
+  price       Decimal?   @db.Decimal(12, 2)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  customers   Customer[]
+  leads       Lead[]     @relation("ServiceRelation")
+}
+
+
+// ─── CRM ─────────────────────────────────────────────
+
+model Customer {
+  id             String    @id @default(cuid())
+  name           String
+  email          String?   @unique
+  phone          String?
+  company        String?
+  address        String?
+  notes          String?
+  assignedToId   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  assignedTo     User?     @relation("CustomerAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  leads          Lead[]
+  activities     Activity[]
+  bookings       Booking[]
+  messages       Message[]
+  services       Service[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([assignedToId])
+}
+
+
+model Lead {
+  id              String        @id @default(cuid())
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  service         String?
+  serviceId       String?
+  sourceId        String?
+  statusId        String?
+  campaignId      String?
+  priority        LeadPriority  @default(MEDIUM)
+  convertedAt     DateTime?
+  customerId      String?
+  assignedToId    String?
+  notes           String?
+  budget          Decimal?      @db.Decimal(12, 2)
+  expectedValue   Decimal?      @db.Decimal(12, 2)
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  source        LeadSource?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  status        LeadStatus?   @relation(fields: [statusId], references: [id], onDelete: SetNull)
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  assignedTo    User?         @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  serviceRef    Service?      @relation("ServiceRelation", fields: [serviceId], references: [id], onDelete: SetNull)
+
+  activities    Activity[]
+  followUps     FollowUp[]
+  bookings      Booking[]
+
+  @@index([statusId])
+  @@index([assignedToId])
+  @@index([sourceId])
+  @@index([campaignId])
+  @@index([serviceId])
+  @@index([priority])
+  @@index([utmSource])
+  @@index([createdAt])
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType @default(NOTE)
+  subject     String
+  description String?
+  leadId      String?
+  customerId  String?
+  userId      String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([leadId])
+  @@index([customerId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model FollowUp {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  dueDate      DateTime
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  leadId       String
+  assignedToId String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lead         Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedTo   User      @relation("FollowUpAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@index([completed])
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  customerId   String
+  leadId       String?
+  propertyName String
+  service      String?
+  roomNumber   String?
+  bookingDate  DateTime      @default(now())
+  checkInDate  DateTime
+  checkOutDate DateTime
+  guests       Int           @default(1)
+  status       BookingStatus @default(PENDING)
+  totalAmount  Decimal       @db.Decimal(12, 2)
+  notes        String?
+  createdById  String
+  assignedToId String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdBy    User          @relation("BookingCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo   User?         @relation("BookingAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  payments     Payment[]
+
+  @@index([customerId])
+  @@index([leadId])
+  @@index([status])
+  @@index([checkInDate])
+  @@index([checkOutDate])
+  @@index([createdAt])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  amount          Decimal       @db.Decimal(12, 2)
+  currency        String        @default("USD")
+  method          PaymentMethod @default(CASH)
+  status          PaymentStatus @default(PENDING)
+  reference       String?
+  paymentProvider String?
+  paymentDate     DateTime?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Campaign {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  targetService String?
+  status        CampaignStatus @default(DRAFT)
+  startDate     DateTime?
+  endDate       DateTime?
+  budget        Decimal?       @db.Decimal(12, 2)
+  notes         String?
+  createdById   String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  createdBy   User?          @relation("CampaignCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  messages    Message[]
+  leads       Lead[]
+
+  @@index([status])
+  @@index([targetService])
+  @@index([startDate])
+  @@index([createdById])
+}
+
+model Message {
+  id            String         @id @default(cuid())
+  customerId    String
+  senderId      String?
+  assignedToId  String?
+  campaignId    String?
+  targetService String?
+  channel       MessageChannel @default(EMAIL)
+  subject       String?
+  body          String
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+
+  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sender       User?          @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  assignedTo   User?          @relation("MessageAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  campaign     Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([senderId])
+  @@index([assignedToId])
+  @@index([campaignId])
+  @@index([targetService])
+  @@index([channel])
+  @@index([createdAt])
+}
+
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ─── System Settings ────────────────────────────────
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Notifications ──────────────────────────────────
+
+enum NotificationType {
+  NEW_LEAD
+  LEAD_ASSIGNED
+  FOLLOW_UP_DUE
+  FOLLOW_UP_OVERDUE
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  PAYMENT_SUCCESSFUL
+  PAYMENT_FAILED
+  CUSTOM
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(CUSTOM)
+  title     String
+  message   String?
+  link      String?
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
