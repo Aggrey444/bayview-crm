@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.build]
-cmds = ["npm install", "npx prisma generate", "npx prisma db push", "next build"]
+cmds = ["npm install", "npx prisma generate", "next build"]
 
 [phases.deploy]
-cmd = "npm start"
+cmd = "npx prisma db push && npm start"
