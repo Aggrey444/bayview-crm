@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.build]
+cmds = ["npm install", "npx prisma generate", "next build"]
+
+[phases.deploy]
+cmd = "npx prisma db push --skip-generate && npm start"
