@@ -3,13 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,19 +17,22 @@ export default function LoginPage() {
     setLoading(true);
     const formData = new FormData(e.currentTarget);
 
-    const result = await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: formData.get("email") as string,
+        password: formData.get("password") as string,
+        redirect: false,
+      });
 
-    setLoading(false);
-
-    if (result?.error) {
-      setError("Invalid email or password");
-    } else {
-      router.push("/dashboard");
-      router.refresh();
+      if (result?.error) {
+        setError("Invalid email or password");
+        setLoading(false);
+      } else {
+        window.location.href = "/dashboard";
+      }
+    } catch {
+      setError("An error occurred. Please try again.");
+      setLoading(false);
     }
   }
 
