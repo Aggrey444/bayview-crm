@@ -1,20 +1,9 @@
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-// Brute-force protection: in-memory rate limiter for login attempts
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const LOGIN_WINDOW = 15 * 60 * 1000; // 15 minutes
-const LOGIN_MAX = 5; // max 5 failed attempts per 15 minutes
-
-// Periodic cleanup
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of loginAttempts.entries()) {
-    if (now > entry.resetAt) {
-      loginAttempts.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
+const LOGIN_WINDOW = 15 * 60 * 1000;
+const LOGIN_MAX = 10;
 
 function checkLoginRateLimit(identifier: string): boolean {
   const now = Date.now();
@@ -31,14 +20,6 @@ function checkLoginRateLimit(identifier: string): boolean {
 
   entry.count++;
   return true;
-}
-
-function recordFailedLogin(identifier: string) {
-  const now = Date.now();
-  const entry = loginAttempts.get(identifier);
-  if (entry && now <= entry.resetAt) {
-    entry.count++;
-  }
 }
 
 declare module "next-auth" {
@@ -96,7 +77,7 @@ export default {
         const email = credentials.email as string;
 
         if (!checkLoginRateLimit(email)) {
-          console.warn(`Rate limit exceeded for login attempts: ${email}`);
+          console.warn(`Rate limit exceeded for: ${email}`);
           return null;
         }
 
@@ -117,7 +98,6 @@ export default {
         });
 
         if (!user || !user.passwordHash) {
-          recordFailedLogin(email);
           return null;
         }
 
@@ -127,7 +107,6 @@ export default {
         );
 
         if (!isValid) {
-          recordFailedLogin(email);
           return null;
         }
 
@@ -183,6 +162,9 @@ export default {
         session.user.permissions = (token.permissions as string[]) ?? [];
       }
       return session;
+    },
+    async authorized({ auth, request }) {
+      return true;
     },
   },
 } satisfies NextAuthConfig;
