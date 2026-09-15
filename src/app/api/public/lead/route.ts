@@ -50,6 +50,19 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
@@ -61,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
         { error: "Too many submissions. Please try again later." },
-        { status: 429 }
+        { status: 429, headers: corsHeaders }
       );
     }
 
@@ -71,14 +84,14 @@ export async function POST(request: NextRequest) {
     // Honeypot check - bots fill this hidden field
     if (data._honeypot) {
       // Silently accept but don't create anything (spam bot)
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true }, { headers: corsHeaders });
     }
 
     // Must have at least email or phone
     if (!data.email && !data.phone) {
       return NextResponse.json(
         { error: "Please provide an email or phone number." },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -162,17 +175,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, leadId: lead.id });
+    return NextResponse.json({ success: true, leadId: lead.id }, { headers: corsHeaders });
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
       return NextResponse.json(
         { error: JSON.parse(error.message)[0].message },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
