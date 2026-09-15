@@ -175,7 +175,7 @@ export default async function LeadDetailPage({ params }: Props) {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Activity ({lead.activities.length})</CardTitle>
-              <AddActivityForm leadId={lead.id} onSuccess={() => {}} />
+              <AddActivityForm leadId={lead.id} />
             </div>
           </CardHeader>
           <CardContent>

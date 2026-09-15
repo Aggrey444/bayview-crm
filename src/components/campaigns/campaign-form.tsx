@@ -105,7 +105,7 @@ export function CampaignForm({
               <Input id="endDate" name="endDate" type="date" defaultValue={defaultValues.endDate as string} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="budget">Budget ($)</Label>
+              <Label htmlFor="budget">Budget (GH₵)</Label>
               <Input id="budget" name="budget" type="number" step="0.01" min="0" defaultValue={defaultValues.budget as string} />
             </div>
           </div>

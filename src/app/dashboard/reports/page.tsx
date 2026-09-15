@@ -80,7 +80,7 @@ interface ReportsData {
 }
 
 function formatCurrency(val: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(val);
+  return new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(val);
 }
 
 function BarChart({ data }: { data: { name: string; value: number }[] }) {

@@ -289,7 +289,7 @@ export function BookingForm({
               <Input id="checkOutDate" name="checkOutDate" type="date" defaultValue={defaultValues.checkOutDate as string} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="totalAmount">Total Amount ($) <span className="text-red-500">*</span></Label>
+              <Label htmlFor="totalAmount">Total Amount (GH₵) <span className="text-red-500">*</span></Label>
               <Input id="totalAmount" name="totalAmount" type="number" step="0.01" min="0" defaultValue={defaultValues.totalAmount as string} required />
             </div>
           </div>

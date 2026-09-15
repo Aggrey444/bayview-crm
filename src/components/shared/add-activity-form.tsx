@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +12,11 @@ type ActivityOption = { id: string; name: string };
 interface AddActivityFormProps {
   leadId?: string;
   customerId?: string;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function AddActivityForm({ leadId, customerId, onSuccess }: AddActivityFormProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,7 +59,11 @@ export function AddActivityForm({ leadId, customerId, onSuccess }: AddActivityFo
 
       setOpen(false);
       setLoading(false);
-      onSuccess();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.refresh();
+      }
     } catch {
       setError("Network error");
       setLoading(false);

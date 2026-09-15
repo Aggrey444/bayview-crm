@@ -104,7 +104,7 @@ export function PaymentForm({
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ($) <span className="text-red-500">*</span></Label>
+              <Label htmlFor="amount">Amount (GH₵) <span className="text-red-500">*</span></Label>
               <Input
                 id="amount"
                 name="amount"
@@ -123,7 +123,7 @@ export function PaymentForm({
               <Input
                 id="currency"
                 name="currency"
-                defaultValue={(defaultValues.currency as string) || "USD"}
+                defaultValue={(defaultValues.currency as string) || "GHS"}
                 maxLength={3}
               />
             </div>

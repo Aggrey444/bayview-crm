@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const cleaned = {
       bookingId: data.bookingId,
       amount: data.amount,
-      currency: data.currency || "USD",
+      currency: data.currency || "GHS",
       method: data.method,
       status: data.status,
       reference: data.reference || null,
