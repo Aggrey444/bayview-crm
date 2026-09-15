@@ -24,10 +24,10 @@ export default async function EditMessagePage({ params }: Props) {
   const message = await getMessageById(id);
   if (!message) notFound();
 
-  const [customers, campaigns] = await Promise.all([
-    db.customer.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    db.campaign.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-  ]);
+  const customers = await db.customer.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="space-y-6">
@@ -36,10 +36,8 @@ export default async function EditMessagePage({ params }: Props) {
         mode="edit"
         messageId={message.id}
         customers={customers}
-        campaigns={campaigns}
         defaultValues={{
           customerId: message.customerId,
-          campaignId: message.campaignId || "",
           channel: message.channel,
           subject: message.subject || "",
           body: message.body,

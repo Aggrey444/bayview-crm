@@ -125,15 +125,6 @@ export async function POST(request: NextRequest) {
       if (source) sourceId = source.id;
     }
 
-    // Find campaign
-    let campaignId: string | null = null;
-    if (data.campaign) {
-      const campaign = await db.campaign.findFirst({
-        where: { name: { equals: data.campaign, mode: "insensitive" } },
-      });
-      if (campaign) campaignId = campaign.id;
-    }
-
     // Find "New" status
     const newStatus = await db.leadStatus.findFirst({
       where: { name: "New" },
@@ -148,13 +139,12 @@ export async function POST(request: NextRequest) {
         service: data.service || null,
         notes: data.message || null,
         sourceId,
-        campaignId,
         statusId: newStatus?.id || null,
         customerId: customer.id,
         priority: "MEDIUM",
         utmSource: data.utmSource || null,
         utmMedium: data.utmMedium || null,
-        utmCampaign: data.utmCampaign || null,
+        utmCampaign: data.utmCampaign || data.campaign || null,
         utmContent: data.utmContent || null,
         utmTerm: data.utmTerm || null,
       },

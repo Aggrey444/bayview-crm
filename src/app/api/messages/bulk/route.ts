@@ -6,7 +6,6 @@ import { z } from "zod";
 
 const bulkMessageSchema = z.object({
   serviceId: z.string().min(1, "Service is required"),
-  campaignId: z.string().optional().or(z.literal("")),
   channel: z.enum(["EMAIL", "SMS", "PHONE", "IN_PERSON", "OTHER"]),
   subject: z.string().max(200).optional().or(z.literal("")),
   body: z.string().min(1, "Message body is required").max(10000),
@@ -40,7 +39,6 @@ export async function POST(request: NextRequest) {
           data: {
             customerId: customer.id,
             senderId: authResult.user.id,
-            campaignId: data.campaignId || null,
             channel: data.channel,
             subject: data.subject || null,
             body: data.body,
@@ -59,7 +57,6 @@ export async function POST(request: NextRequest) {
         serviceId: data.serviceId,
         channel: data.channel,
         recipientCount: customers.length,
-        campaignId: data.campaignId || null,
       },
       request,
     });

@@ -36,29 +36,21 @@ export async function getLeadsBySource(params: ReportParams) {
   );
 }
 
-export async function getLeadsByCampaign(params: ReportParams) {
+export async function getTasksPerformance(params: ReportParams) {
   const { start, end } = getDateRange(params);
-  return db.campaign.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      leads: {
-        where: { createdAt: { gte: start, lte: end } },
-        select: { id: true, convertedAt: true },
-      },
-    },
-  }).then((campaigns) =>
-    campaigns
-      .map((c) => ({
-        name: c.name,
-        total: c.leads.length,
-        converted: c.leads.filter((l) => l.convertedAt !== null).length,
-        rate: c.leads.length > 0
-          ? Math.round((c.leads.filter((l) => l.convertedAt !== null).length / c.leads.length) * 100)
-          : 0,
-      }))
-      .filter((c) => c.total > 0)
-      .sort((a, b) => b.total - a.total)
-  );
+  const tasks = await db.task.findMany({
+    where: { createdAt: { gte: start, lte: end } },
+    select: { status: true, priority: true, dueDate: true, completedAt: true },
+  });
+  const total = tasks.length;
+  const completed = tasks.filter((t) => t.status === "COMPLETED").length;
+  const inProgress = tasks.filter((t) => t.status === "IN_PROGRESS").length;
+  const todo = tasks.filter((t) => t.status === "TODO").length;
+  const overdue = tasks.filter(
+    (t) => t.dueDate && t.dueDate < new Date() && t.status !== "COMPLETED" && t.status !== "CANCELLED"
+  ).length;
+  const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  return { total, completed, inProgress, todo, overdue, completionRate };
 }
 
 export async function getLeadsByService(params: ReportParams) {

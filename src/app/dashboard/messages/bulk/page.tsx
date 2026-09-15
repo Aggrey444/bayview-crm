@@ -10,16 +10,10 @@ export default async function BulkMessagePage() {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
-  const [services, campaigns] = await Promise.all([
-    db.service.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    db.campaign.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const services = await db.service.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="space-y-6">
@@ -27,7 +21,7 @@ export default async function BulkMessagePage() {
         title="Bulk Message"
         description="Send a message to all customers subscribed to a service."
       />
-      <BulkMessageForm services={services} campaigns={campaigns} />
+      <BulkMessageForm services={services} />
     </div>
   );
 }

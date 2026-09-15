@@ -13,7 +13,8 @@ import {
   UserPlus,
   CalendarCheck,
   CreditCard,
-  Megaphone,
+  Calendar,
+  CheckSquare,
   MessageSquare,
   UserCog,
   Clock,
@@ -41,8 +42,12 @@ const crmNavItems: NavItem[] = [
   { title: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "payments.view" },
 ];
 
-const marketingNavItems: NavItem[] = [
-  { title: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone, permission: "campaigns.view" },
+const taskNavItems: NavItem[] = [
+  { title: "Calendar", href: "/dashboard/calendar", icon: Calendar, permission: "tasks.view" },
+  { title: "Tasks", href: "/dashboard/tasks", icon: CheckSquare, permission: "tasks.view" },
+];
+
+const communicationNavItems: NavItem[] = [
   { title: "Messages", href: "/dashboard/messages", icon: MessageSquare, permission: "messages.view" },
   { title: "Bulk Message", href: "/dashboard/messages/bulk", icon: Send, permission: "messages.create" },
 ];
@@ -180,8 +185,11 @@ export function Sidebar({ collapsed = false, onToggle, permissions = [] }: Sideb
         <SectionLabel collapsed={collapsed}>CRM</SectionLabel>
         <SidebarNavGroup items={crmNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
 
-        <SectionLabel collapsed={collapsed}>Marketing</SectionLabel>
-        <SidebarNavGroup items={marketingNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+        <SectionLabel collapsed={collapsed}>Operations</SectionLabel>
+        <SidebarNavGroup items={taskNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+
+        <SectionLabel collapsed={collapsed}>Communication</SectionLabel>
+        <SidebarNavGroup items={communicationNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
 
         <SectionLabel collapsed={collapsed}>System</SectionLabel>
         <SidebarNavGroup items={systemNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />

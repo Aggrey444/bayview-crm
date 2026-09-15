@@ -23,11 +23,11 @@ export const PERMISSIONS = [
   { key: "payments.edit", module: "payments", action: "edit", description: "Edit payments" },
   { key: "payments.delete", module: "payments", action: "delete", description: "Delete payments" },
 
-  // Campaigns
-  { key: "campaigns.view", module: "campaigns", action: "view", description: "View campaigns" },
-  { key: "campaigns.create", module: "campaigns", action: "create", description: "Create campaigns" },
-  { key: "campaigns.edit", module: "campaigns", action: "edit", description: "Edit campaigns" },
-  { key: "campaigns.delete", module: "campaigns", action: "delete", description: "Delete campaigns" },
+  // Tasks & Calendar
+  { key: "tasks.view", module: "tasks", action: "view", description: "View tasks and calendar" },
+  { key: "tasks.create", module: "tasks", action: "create", description: "Create tasks" },
+  { key: "tasks.edit", module: "tasks", action: "edit", description: "Edit tasks" },
+  { key: "tasks.delete", module: "tasks", action: "delete", description: "Delete tasks" },
 
   // Messages
   { key: "messages.view", module: "messages", action: "view", description: "View messages" },
@@ -79,7 +79,7 @@ export const MODULES = [
   "customers",
   "bookings",
   "payments",
-  "campaigns",
+  "tasks",
   "messages",
   "followUps",
   "activities",

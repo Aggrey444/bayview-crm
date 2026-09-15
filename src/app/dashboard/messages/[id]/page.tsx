@@ -91,17 +91,6 @@ export default async function MessageDetailPage({ params }: Props) {
         </Card>
       </div>
 
-      {message.campaign && (
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-4">
-            <div>
-              <p className="text-xs text-zinc-500">Campaign</p>
-              <p className="text-sm font-medium">{message.campaign.name}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>Message Body</CardTitle>

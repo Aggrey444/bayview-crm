@@ -16,7 +16,6 @@ interface LeadFormProps {
   sources: Option[];
   statuses: Option[];
   staff: Option[];
-  campaigns: Option[];
   customers: Option[];
 }
 
@@ -27,7 +26,6 @@ export function LeadForm({
   sources,
   statuses,
   staff,
-  campaigns,
   customers,
 }: LeadFormProps) {
   const router = useRouter();
@@ -50,7 +48,6 @@ export function LeadForm({
       statusId: fd.get("statusId") as string,
       assignedToId: fd.get("assignedToId") as string,
       customerId: fd.get("customerId") as string,
-      campaignId: fd.get("campaignId") as string,
       priority: fd.get("priority") as string,
       notes: fd.get("notes") as string,
       budget: fd.get("budget") as string,
@@ -173,21 +170,12 @@ export function LeadForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="assignedToId">Assigned Staff</Label>
               <select id="assignedToId" name="assignedToId" defaultValue={defaultValues.assignedToId as string} className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                 <option value="">Unassigned</option>
                 {staff.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="campaignId">Campaign</Label>
-              <select id="campaignId" name="campaignId" defaultValue={defaultValues.campaignId as string} className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                <option value="">None</option>
-                {campaigns.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>

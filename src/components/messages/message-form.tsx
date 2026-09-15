@@ -14,7 +14,6 @@ interface MessageFormProps {
   defaultValues?: Record<string, unknown>;
   messageId?: string;
   customers: Option[];
-  campaigns?: Option[];
 }
 
 export function MessageForm({
@@ -22,7 +21,6 @@ export function MessageForm({
   defaultValues = {},
   messageId,
   customers,
-  campaigns = [],
 }: MessageFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -38,7 +36,6 @@ export function MessageForm({
 
     const body = {
       customerId: fd.get("customerId") as string,
-      campaignId: fd.get("campaignId") as string,
       channel: fd.get("channel") as string,
       subject: fd.get("subject") as string,
       body: fd.get("body") as string,
@@ -124,32 +121,14 @@ export function MessageForm({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="campaignId">Campaign</Label>
-              <select
-                id="campaignId"
-                name="campaignId"
-                defaultValue={defaultValues.campaignId as string}
-                className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">None</option>
-                {campaigns.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sentAt">Sent At</Label>
-              <Input
-                id="sentAt"
-                name="sentAt"
-                type="date"
-                defaultValue={defaultSentAt}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="sentAt">Sent At</Label>
+            <Input
+              id="sentAt"
+              name="sentAt"
+              type="date"
+              defaultValue={defaultSentAt}
+            />
           </div>
 
           <div className="space-y-2">

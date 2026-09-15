@@ -53,7 +53,7 @@ export async function getLeadById(id: string) {
       status: true,
       assignedTo: { select: { id: true, name: true, image: true } },
       customer: true,
-      campaign: true,
+      tasks: true,
       activities: {
         orderBy: { createdAt: "desc" },
         take: 50,

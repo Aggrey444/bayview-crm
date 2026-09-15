@@ -8,7 +8,6 @@ export const leadSchema = z.object({
   service: z.string().max(200).optional().or(z.literal("")),
   sourceId: z.string().optional().or(z.literal("")),
   statusId: z.string().optional().or(z.literal("")),
-  campaignId: z.string().optional().or(z.literal("")),
   assignedToId: z.string().optional().or(z.literal("")),
   customerId: z.string().optional().or(z.literal("")),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),

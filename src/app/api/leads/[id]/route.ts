@@ -20,7 +20,10 @@ export async function GET(
       status: true,
       assignedTo: { select: { id: true, name: true, image: true } },
       customer: true,
-      campaign: true,
+      tasks: {
+        orderBy: { dueDate: "asc" },
+        include: { assignedTo: { select: { id: true, name: true } } },
+      },
       activities: {
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -69,7 +72,6 @@ export async function PUT(
       service: data.service || null,
       sourceId: data.sourceId || null,
       statusId: data.statusId || null,
-      campaignId: data.campaignId || null,
       assignedToId: data.assignedToId || null,
       customerId: data.customerId || null,
       priority: data.priority,

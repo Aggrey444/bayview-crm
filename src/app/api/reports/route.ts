@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getLeadsBySource,
-  getLeadsByCampaign,
+  getTasksPerformance,
   getLeadsByService,
   getLeadsByStaff,
   getLeadConversionRate,
@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     switch (report) {
       case "leads-by-source":
         return NextResponse.json(await getLeadsBySource(params));
-      case "leads-by-campaign":
-        return NextResponse.json(await getLeadsByCampaign(params));
+      case "tasks-performance":
+        return NextResponse.json(await getTasksPerformance(params));
       case "leads-by-service":
         return NextResponse.json(await getLeadsByService(params));
       case "leads-by-staff":
@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(await getFollowUpPerformance(params));
       case "all":
       default: {
-        const [leadsBySource, leadsByCampaign, leadsByService, leadsByStaff, conversionRate, bookings, payments, revenue, followUps] =
+        const [leadsBySource, tasksPerformance, leadsByService, leadsByStaff, conversionRate, bookings, payments, revenue, followUps] =
           await Promise.all([
             getLeadsBySource(params),
-            getLeadsByCampaign(params),
+            getTasksPerformance(params),
             getLeadsByService(params),
             getLeadsByStaff(params),
             getLeadConversionRate(params),
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
           ]);
         return NextResponse.json({
           leadsBySource,
-          leadsByCampaign,
+          tasksPerformance,
           leadsByService,
           leadsByStaff,
           conversionRate,

@@ -24,11 +24,10 @@ export default async function EditLeadPage({ params }: Props) {
   const lead = await getLeadById(id);
   if (!lead) notFound();
 
-  const [sources, statuses, staff, campaigns, customers] = await Promise.all([
+  const [sources, statuses, staff, customers] = await Promise.all([
     db.leadSource.findMany({ orderBy: { name: "asc" } }),
     db.leadStatus.findMany({ orderBy: { sortOrder: "asc" } }),
     db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }).then((u) => u.map((s) => ({ id: s.id, name: s.name || "Unknown" }))),
-    db.campaign.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     db.customer.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
@@ -41,7 +40,6 @@ export default async function EditLeadPage({ params }: Props) {
         sources={sources}
         statuses={statuses}
         staff={staff}
-        campaigns={campaigns}
         customers={customers}
         defaultValues={{
           name: lead.name,
@@ -51,7 +49,6 @@ export default async function EditLeadPage({ params }: Props) {
           service: lead.service || "",
           sourceId: lead.sourceId || "",
           statusId: lead.statusId || "",
-          campaignId: lead.campaignId || "",
           assignedToId: lead.assignedToId || "",
           customerId: lead.customerId || "",
           priority: lead.priority,

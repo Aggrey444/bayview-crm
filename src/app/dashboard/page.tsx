@@ -24,6 +24,8 @@ import {
   TrendingUp,
   Clock,
   ArrowRight,
+  Calendar,
+  CheckSquare,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -174,7 +176,8 @@ export default async function DashboardPage() {
                 { label: "Add Lead", href: "/dashboard/leads/new", icon: UserPlus, color: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400" },
                 { label: "New Booking", href: "/dashboard/bookings/new", icon: CalendarCheck, color: "text-violet-600 bg-violet-50 dark:bg-violet-950/50 dark:text-violet-400" },
                 { label: "View Reports", href: "/dashboard/reports", icon: TrendingUp, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400" },
-                { label: "Campaigns", href: "/dashboard/campaigns", icon: CreditCard, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400" },
+                { label: "Calendar", href: "/dashboard/calendar", icon: Calendar, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400" },
+                { label: "My Tasks", href: "/dashboard/tasks", icon: CheckSquare, color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 dark:text-indigo-400" },
               ].map((action) => (
                 <Link
                   key={action.href}

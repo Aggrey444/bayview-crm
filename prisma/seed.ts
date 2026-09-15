@@ -89,6 +89,7 @@ async function main() {
     "bookings.view", "bookings.create", "bookings.edit",
     "followUps.view", "followUps.create", "followUps.edit",
     "activities.view", "activities.create", "activities.edit",
+    "tasks.view", "tasks.create", "tasks.edit",
     "settings.view",
   ];
   const staffPerms = await prisma.permission.findMany({

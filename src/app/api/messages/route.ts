@@ -13,12 +13,11 @@ export async function GET(request: NextRequest) {
     q: searchParams.get("q") || undefined,
     channel: searchParams.get("channel") || undefined,
     customerId: searchParams.get("customerId") || undefined,
-    campaignId: searchParams.get("campaignId") || undefined,
     page: searchParams.get("page") || 1,
     limit: searchParams.get("limit") || 10,
   });
 
-  const { q, channel, customerId, campaignId, page, limit } = params;
+  const { q, channel, customerId, page, limit } = params;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
@@ -30,7 +29,6 @@ export async function GET(request: NextRequest) {
   }
   if (channel) where.channel = channel;
   if (customerId) where.customerId = customerId;
-  if (campaignId) where.campaignId = campaignId;
 
   const [messages, total] = await Promise.all([
     db.message.findMany({
@@ -66,7 +64,6 @@ export async function POST(request: NextRequest) {
 
     const cleaned = {
       customerId: data.customerId,
-      campaignId: data.campaignId || null,
       channel: data.channel,
       subject: data.subject || null,
       body: data.body,

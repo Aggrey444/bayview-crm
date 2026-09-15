@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
       service: data.service || null,
       sourceId: data.sourceId || null,
       statusId: data.statusId || null,
-      campaignId: data.campaignId || null,
       assignedToId: data.assignedToId || null,
       customerId: data.customerId || null,
       priority: data.priority,

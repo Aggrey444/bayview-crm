@@ -2,7 +2,7 @@ import { db } from "@/lib/prisma";
 import type { MessageSearchParams } from "@/lib/validations/message";
 
 export async function getMessages(params: MessageSearchParams) {
-  const { q, channel, customerId, campaignId, page, limit } = params;
+  const { q, channel, customerId, page, limit } = params;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
@@ -14,7 +14,6 @@ export async function getMessages(params: MessageSearchParams) {
   }
   if (channel) where.channel = channel;
   if (customerId) where.customerId = customerId;
-  if (campaignId) where.campaignId = campaignId;
 
   const [messages, total] = await Promise.all([
     db.message.findMany({
@@ -45,7 +44,6 @@ export async function getMessageById(id: string) {
     include: {
       customer: { select: { id: true, name: true, email: true } },
       sender: { select: { id: true, name: true } },
-      campaign: { select: { id: true, name: true } },
     },
   });
 }

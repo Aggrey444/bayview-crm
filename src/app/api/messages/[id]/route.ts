@@ -18,7 +18,6 @@ export async function GET(
     include: {
       customer: { select: { id: true, name: true, email: true } },
       sender: { select: { id: true, name: true } },
-      campaign: { select: { id: true, name: true } },
       assignedTo: { select: { id: true, name: true } },
     },
   });
@@ -49,7 +48,6 @@ export async function PUT(
 
     const cleaned = {
       customerId: data.customerId,
-      campaignId: data.campaignId || null,
       channel: data.channel,
       subject: data.subject || null,
       body: data.body,

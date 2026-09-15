@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +18,13 @@ interface LeadsBySource {
   rate: number;
 }
 
-interface LeadsByCampaign {
-  name: string;
+interface TasksPerformance {
   total: number;
-  converted: number;
-  rate: number;
+  completed: number;
+  inProgress: number;
+  todo: number;
+  overdue: number;
+  completionRate: number;
 }
 
 interface LeadsByService {
@@ -69,7 +71,7 @@ interface FollowUpPerformance {
 
 interface ReportsData {
   leadsBySource: LeadsBySource[];
-  leadsByCampaign: LeadsByCampaign[];
+  tasksPerformance: TasksPerformance;
   leadsByService: LeadsByService[];
   leadsByStaff: LeadsByStaff[];
   conversionRate: ConversionRate;
@@ -302,18 +304,24 @@ export default function ReportsPage() {
             </Card>
           </div>
 
-          {/* Row 4: Leads by Campaign + Leads by Staff */}
+          {/* Row 4: Task Performance + Leads by Staff */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Leads by Campaign</CardTitle>
+                <CardTitle className="text-base">Task Performance</CardTitle>
+                <CardDescription>Task completion and operational status</CardDescription>
               </CardHeader>
               <CardContent>
-                {data.leadsByCampaign.length > 0 ? (
-                  <BarChart data={data.leadsByCampaign.map((c) => ({ name: c.name, value: c.total }))} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">No data.</p>
-                )}
+                <div className="space-y-1">
+                  <StatRow label="Total Tasks" value={data.tasksPerformance.total} />
+                  <StatRow label="Completed" value={data.tasksPerformance.completed} badge="done" />
+                  <StatRow label="In Progress" value={data.tasksPerformance.inProgress} />
+                  <StatRow label="To Do" value={data.tasksPerformance.todo} />
+                  <StatRow label="Overdue" value={data.tasksPerformance.overdue} />
+                  <div className="pt-2 border-t">
+                    <StatRow label="Completion Rate" value={`${data.tasksPerformance.completionRate}%`} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
             <Card>
