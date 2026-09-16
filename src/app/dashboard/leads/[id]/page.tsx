@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -21,8 +22,9 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const session = await auth();
   const { id } = await params;
-  const lead = await getLeadById(id);
+  const lead = await getLeadById(id, buildCtx(session?.user ?? { id: "", role: null }));
   return { title: lead ? `${lead.name} — Leads` : "Lead Not Found" };
 }
 
@@ -37,8 +39,10 @@ export default async function LeadDetailPage({ params }: Props) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
+  const ctx = buildCtx(session.user);
+
   const { id } = await params;
-  const lead = await getLeadById(id);
+  const lead = await getLeadById(id, ctx);
   if (!lead) notFound();
 
   const [allStatuses, allStaff] = await Promise.all([

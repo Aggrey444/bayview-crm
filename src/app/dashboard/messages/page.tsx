@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -26,13 +27,15 @@ export default async function MessagesPage({
     );
   }
 
+  const ctx = buildCtx(session.user);
+
   const params = await searchParams;
   const data = await getMessages({
     q: params.q || "",
     channel: (params.channel as "" | "EMAIL" | "SMS" | "PHONE" | "IN_PERSON" | "OTHER") || undefined,
     page: Number(params.page) || 1,
     limit: 10,
-  });
+  }, ctx);
 
   return (
     <div className="space-y-6">

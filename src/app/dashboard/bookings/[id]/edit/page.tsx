@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect, notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { BookingForm } from "@/components/bookings/booking-form";
@@ -11,8 +12,9 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const session = await auth();
   const { id } = await params;
-  const booking = await getBookingById(id);
+  const booking = await getBookingById(id, buildCtx(session?.user ?? { id: "", role: null }));
   return { title: booking ? `Edit Booking` : "Booking Not Found" };
 }
 
@@ -20,8 +22,10 @@ export default async function EditBookingPage({ params }: Props) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
+  const ctx = buildCtx(session.user);
+
   const { id } = await params;
-  const booking = await getBookingById(id);
+  const booking = await getBookingById(id, ctx);
   if (!booking) notFound();
 
   const [customers, staff, leads] = await Promise.all([

@@ -4,6 +4,7 @@ import { paymentSchema, paymentSearchSchema } from "@/lib/validations/payment";
 import { notifyPaymentSuccessful, notifyPaymentFailed } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
   const authResult = await requirePermission("payments.view");
@@ -32,9 +33,12 @@ export async function GET(request: NextRequest) {
     ];
   }
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "payment"));
+
   const [payments, total] = await Promise.all([
     db.payment.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -48,7 +52,7 @@ export async function GET(request: NextRequest) {
         },
       },
     }),
-    db.payment.count({ where }),
+    db.payment.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({

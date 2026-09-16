@@ -4,6 +4,7 @@ import { bookingSchema, bookingSearchSchema } from "@/lib/validations/booking";
 import { notifyBookingCreated } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
   const authResult = await requirePermission("bookings.view");
@@ -30,9 +31,12 @@ export async function GET(request: NextRequest) {
   }
   if (status) where.status = status;
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "booking"));
+
   const [bookings, total] = await Promise.all([
     db.booking.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -43,7 +47,7 @@ export async function GET(request: NextRequest) {
         _count: { select: { payments: true } },
       },
     }),
-    db.booking.count({ where }),
+    db.booking.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({

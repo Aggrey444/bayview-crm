@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -35,13 +36,15 @@ export default async function PaymentsPage({
     );
   }
 
+  const ctx = buildCtx(session.user);
+
   const params = await searchParams;
   const data = await getPayments({
     q: params.q || "",
     status: (params.status as "" | "PENDING" | "SUCCESSFUL" | "FAILED" | "REFUNDED") || undefined,
     page: Number(params.page) || 1,
     limit: 10,
-  });
+  }, ctx);
 
   const statuses = ["PENDING", "SUCCESSFUL", "FAILED", "REFUNDED"];
 

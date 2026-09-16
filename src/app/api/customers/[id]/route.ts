@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { customerSchema } from "@/lib/validations/customer";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(
   _request: NextRequest,
@@ -13,8 +14,9 @@ export async function GET(
 
   const { id } = await params;
 
-  const customer = await db.customer.findUnique({
-    where: { id },
+  const ctx = buildCtx(authResult.user);
+  const customer = await db.customer.findFirst({
+    where: mergeScope({ id }, scopeFilter(ctx, "customer")),
     include: {
       services: { select: { id: true, name: true } },
       leads: {
@@ -68,8 +70,9 @@ export async function PUT(
     const body = await request.json();
     const data = customerSchema.parse(body);
 
-    const existing = await db.customer.findUnique({
-      where: { id },
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.customer.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "customer")),
       include: { services: { select: { id: true } } },
     });
     if (!existing) {
@@ -153,8 +156,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await db.customer.findUnique({
-      where: { id },
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.customer.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "customer")),
       select: { id: true, _count: { select: { bookings: true } } },
     });
 

@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { activitySchema } from "@/lib/validations/activity";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
   const authResult = await requirePermission("activities.view");
@@ -21,9 +22,12 @@ export async function GET(request: NextRequest) {
   if (customerId) where.customerId = customerId;
   if (type) where.type = type;
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "activity"));
+
   const [activities, total] = await Promise.all([
     db.activity.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
         customer: { select: { id: true, name: true } },
       },
     }),
-    db.activity.count({ where }),
+    db.activity.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({

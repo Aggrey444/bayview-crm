@@ -20,6 +20,7 @@ import {
   Clock,
   Shield,
   Send,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -53,6 +54,7 @@ const communicationNavItems: NavItem[] = [
 ];
 
 const systemNavItems: NavItem[] = [
+  { title: "Website Management", href: "/dashboard/website", icon: Globe, permission: "settings.view" },
   { title: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "reports.view" },
   { title: "Audit Log", href: "/dashboard/audit", icon: Shield, permission: "audit.view" },
   { title: "Users", href: "/dashboard/users", icon: UserCog, permission: "users.view" },

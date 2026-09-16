@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { FollowUpList } from "@/components/shared/follow-up-list";
@@ -20,7 +21,9 @@ export default async function FollowUpsPage() {
     );
   }
 
-  const { overdue, today, upcoming } = await getFollowUpDashboard();
+  const ctx = buildCtx(session.user);
+
+  const { overdue, today, upcoming } = await getFollowUpDashboard(ctx);
   const all = [...overdue, ...today, ...upcoming];
   const staff = await db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
 

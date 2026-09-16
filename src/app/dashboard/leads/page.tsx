@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { LeadList } from "@/components/leads/lead-list";
@@ -24,6 +25,8 @@ export default async function LeadsPage({
     );
   }
 
+  const ctx = buildCtx(session.user);
+
   const params = await searchParams;
   const q = params.q || "";
   const page = Number(params.page) || 1;
@@ -33,7 +36,7 @@ export default async function LeadsPage({
   const priority = priorityParam ? (priorityParam as "LOW" | "MEDIUM" | "HIGH" | "URGENT") : undefined;
   const view = (params.view || "list") as "list" | "pipeline";
 
-  const data = await getLeads({ q, page, limit: 10, statusId, sourceId, priority, view });
+  const data = await getLeads({ q, page, limit: 10, statusId, sourceId, priority, view }, ctx);
 
   const [sources, statuses] = await Promise.all([
     db.leadSource.findMany({ orderBy: { name: "asc" } }),

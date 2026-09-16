@@ -11,7 +11,9 @@ export async function PATCH(
     if ("error" in authResult) return authResult.error;
 
     const { id } = await params;
-    const notification = await db.notification.findUnique({ where: { id } });
+    const notification = await db.notification.findFirst({
+      where: { id, userId: authResult.user.id },
+    });
     if (!notification) {
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
     }
@@ -37,6 +39,13 @@ export async function DELETE(
     if ("error" in authResult) return authResult.error;
 
     const { id } = await params;
+    const notification = await db.notification.findFirst({
+      where: { id, userId: authResult.user.id },
+    });
+    if (!notification) {
+      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+
     await db.notification.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

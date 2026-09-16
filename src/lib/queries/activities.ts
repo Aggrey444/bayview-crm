@@ -1,12 +1,20 @@
 import { db } from "@/lib/prisma";
+import {
+  type AccessContext,
+  scopeFilter,
+  mergeScope,
+} from "@/lib/queries/access";
 
-export async function getActivities(params: {
-  leadId?: string;
-  customerId?: string;
-  type?: string;
-  page?: number;
-  limit?: number;
-}) {
+export async function getActivities(
+  params: {
+    leadId?: string;
+    customerId?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  },
+  ctx?: AccessContext,
+) {
   const { leadId, customerId, type, page = 1, limit = 20 } = params;
   const skip = (page - 1) * limit;
 
@@ -15,9 +23,13 @@ export async function getActivities(params: {
   if (customerId) where.customerId = customerId;
   if (type) where.type = type;
 
+  const finalWhere = ctx
+    ? mergeScope(where, scopeFilter(ctx, "activity"))
+    : where;
+
   const [activities, total] = await Promise.all([
     db.activity.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -27,7 +39,7 @@ export async function getActivities(params: {
         customer: { select: { id: true, name: true } },
       },
     }),
-    db.activity.count({ where }),
+    db.activity.count({ where: finalWhere }),
   ]);
 
   return {
@@ -39,15 +51,19 @@ export async function getActivities(params: {
   };
 }
 
-export async function getFollowUps(params: {
-  leadId?: string;
-  assignedToId?: string;
-  completed?: boolean;
-  overdue?: boolean;
-  page?: number;
-  limit?: number;
-}) {
-  const { leadId, assignedToId, completed, overdue, page = 1, limit = 20 } = params;
+export async function getFollowUps(
+  params: {
+    leadId?: string;
+    assignedToId?: string;
+    completed?: boolean;
+    overdue?: boolean;
+    page?: number;
+    limit?: number;
+  },
+  ctx?: AccessContext,
+) {
+  const { leadId, assignedToId, completed, overdue, page = 1, limit = 20 } =
+    params;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
@@ -59,9 +75,13 @@ export async function getFollowUps(params: {
     where.dueDate = { lt: new Date() };
   }
 
+  const finalWhere = ctx
+    ? mergeScope(where, scopeFilter(ctx, "followUp"))
+    : where;
+
   const [followUps, total] = await Promise.all([
     db.followUp.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { dueDate: "asc" },
@@ -70,7 +90,7 @@ export async function getFollowUps(params: {
         assignedTo: { select: { id: true, name: true } },
       },
     }),
-    db.followUp.count({ where }),
+    db.followUp.count({ where: finalWhere }),
   ]);
 
   return {
@@ -82,7 +102,7 @@ export async function getFollowUps(params: {
   };
 }
 
-export async function getFollowUpDashboard() {
+export async function getFollowUpDashboard(ctx?: AccessContext) {
   const now = new Date();
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
@@ -95,9 +115,14 @@ export async function getFollowUpDashboard() {
   endOfWeek.setDate(endOfWeek.getDate() + 7);
   endOfWeek.setHours(23, 59, 59, 999);
 
+  const scope = ctx ? scopeFilter(ctx, "followUp") : {};
+
   const [overdue, today, upcoming] = await Promise.all([
     db.followUp.findMany({
-      where: { completed: false, dueDate: { lt: now } },
+      where: mergeScope(
+        { completed: false, dueDate: { lt: now } },
+        scope,
+      ),
       orderBy: { dueDate: "asc" },
       take: 20,
       include: {
@@ -106,10 +131,13 @@ export async function getFollowUpDashboard() {
       },
     }),
     db.followUp.findMany({
-      where: {
-        completed: false,
-        dueDate: { gte: now, lte: endOfDay },
-      },
+      where: mergeScope(
+        {
+          completed: false,
+          dueDate: { gte: now, lte: endOfDay },
+        },
+        scope,
+      ),
       orderBy: { dueDate: "asc" },
       include: {
         lead: { select: { id: true, name: true } },
@@ -117,10 +145,13 @@ export async function getFollowUpDashboard() {
       },
     }),
     db.followUp.findMany({
-      where: {
-        completed: false,
-        dueDate: { gt: endOfDay, lte: endOfWeek },
-      },
+      where: mergeScope(
+        {
+          completed: false,
+          dueDate: { gt: endOfDay, lte: endOfWeek },
+        },
+        scope,
+      ),
       orderBy: { dueDate: "asc" },
       take: 20,
       include: {

@@ -4,6 +4,7 @@ import { followUpSchema } from "@/lib/validations/activity";
 import { notifyFollowUpDue } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
     const authResult = await requirePermission("followUps.view");
@@ -28,9 +29,12 @@ export async function GET(request: NextRequest) {
     where.dueDate = { lt: new Date() };
   }
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "followUp"));
+
   const [followUps, total] = await Promise.all([
     db.followUp.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { dueDate: "asc" },
@@ -39,7 +43,7 @@ export async function GET(request: NextRequest) {
         assignedTo: { select: { id: true, name: true } },
       },
     }),
-    db.followUp.count({ where }),
+    db.followUp.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({

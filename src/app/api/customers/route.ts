@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { customerSchema, customerSearchSchema } from "@/lib/validations/customer";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
   const authResult = await requirePermission("customers.view");
@@ -33,9 +34,12 @@ export async function GET(request: NextRequest) {
     where.services = { some: { id: serviceId } };
   }
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "customer"));
+
   const [customers, total] = await Promise.all([
     db.customer.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -46,7 +50,7 @@ export async function GET(request: NextRequest) {
         },
       },
     }),
-    db.customer.count({ where }),
+    db.customer.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({
@@ -75,6 +79,11 @@ export async function POST(request: NextRequest) {
       notes: data.notes || null,
       ...(body.assignedToId && { assignedToId: body.assignedToId }),
     };
+
+    // Non view-all users must be able to see what they created
+    if (!authResult.user.role?.viewAllData && !cleaned.assignedToId) {
+      cleaned.assignedToId = authResult.user.id;
+    }
 
     if (cleaned.email) {
       const existing = await db.customer.findUnique({

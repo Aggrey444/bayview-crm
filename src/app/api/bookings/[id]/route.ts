@@ -4,6 +4,7 @@ import { bookingSchema, bookingStatusSchema } from "@/lib/validations/booking";
 import { notifyBookingConfirmed } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(
   _request: NextRequest,
@@ -14,8 +15,9 @@ export async function GET(
 
   const { id } = await params;
 
-  const booking = await db.booking.findUnique({
-    where: { id },
+  const ctx = buildCtx(authResult.user);
+  const booking = await db.booking.findFirst({
+    where: mergeScope({ id }, scopeFilter(ctx, "booking")),
     include: {
       customer: true,
       assignedTo: { select: { id: true, name: true } },
@@ -44,7 +46,10 @@ export async function PUT(
     const body = await request.json();
     const data = bookingSchema.parse(body);
 
-    const existing = await db.booking.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.booking.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "booking")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
@@ -100,7 +105,10 @@ export async function PATCH(
     const body = await request.json();
     const { status } = bookingStatusSchema.parse(body);
 
-    const existing = await db.booking.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.booking.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "booking")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
@@ -149,8 +157,9 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await db.booking.findUnique({
-      where: { id },
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.booking.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "booking")),
       select: { id: true, _count: { select: { payments: true } } },
     });
 

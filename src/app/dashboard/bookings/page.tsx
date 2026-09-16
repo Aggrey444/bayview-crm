@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -38,13 +39,15 @@ export default async function BookingsPage({
     );
   }
 
+  const ctx = buildCtx(session.user);
+
   const params = await searchParams;
   const data = await getBookings({
     q: params.q || "",
     status: (params.status as "" | "PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED" | "COMPLETED") || undefined,
     page: Number(params.page) || 1,
     limit: 10,
-  });
+  }, ctx);
 
   const statuses = ["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "COMPLETED"];
 

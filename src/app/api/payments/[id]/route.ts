@@ -4,6 +4,7 @@ import { paymentSchema, paymentStatusSchema } from "@/lib/validations/payment";
 import { notifyPaymentSuccessful, notifyPaymentFailed } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(
   _request: NextRequest,
@@ -14,8 +15,9 @@ export async function GET(
 
   const { id } = await params;
 
-  const payment = await db.payment.findUnique({
-    where: { id },
+  const ctx = buildCtx(authResult.user);
+  const payment = await db.payment.findFirst({
+    where: mergeScope({ id }, scopeFilter(ctx, "payment")),
     include: {
       booking: {
         include: {
@@ -46,7 +48,10 @@ export async function PUT(
     const body = await request.json();
     const data = paymentSchema.parse(body);
 
-    const existing = await db.payment.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.payment.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "payment")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
@@ -99,7 +104,10 @@ export async function PATCH(
     const body = await request.json();
     const { status } = paymentStatusSchema.parse(body);
 
-    const existing = await db.payment.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.payment.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "payment")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
@@ -161,7 +169,10 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await db.payment.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.payment.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "payment")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }

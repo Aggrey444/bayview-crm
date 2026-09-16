@@ -18,12 +18,11 @@ const publicLeadSchema = z.object({
   _honeypot: z.string().max(0).optional().or(z.literal("")),
 });
 
-// Simple in-memory rate limiter (resets on server restart)
+// In-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 5; // max 5 submissions per minute per IP
+const RATE_LIMIT_MAX = 10; // max 10 submissions per minute per IP
 
-// Periodic cleanup to prevent memory leak
 setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of rateLimitMap.entries()) {
@@ -31,7 +30,7 @@ setInterval(() => {
       rateLimitMap.delete(ip);
     }
   }
-}, 5 * 60 * 1000); // cleanup every 5 minutes
+}, 5 * 60 * 1000);
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -65,7 +64,6 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
@@ -83,7 +81,6 @@ export async function POST(request: NextRequest) {
 
     // Honeypot check - bots fill this hidden field
     if (data._honeypot) {
-      // Silently accept but don't create anything (spam bot)
       return NextResponse.json({ success: true }, { headers: corsHeaders });
     }
 
@@ -118,11 +115,12 @@ export async function POST(request: NextRequest) {
 
     // Find source
     let sourceId: string | null = null;
-    if (data.source) {
-      const source = await db.leadSource.findFirst({
-        where: { name: { equals: data.source, mode: "insensitive" } },
-      });
-      if (source) sourceId = source.id;
+    const sourceName = data.source || "Website";
+    const source = await db.leadSource.findFirst({
+      where: { name: { equals: sourceName, mode: "insensitive" } },
+    });
+    if (source) {
+      sourceId = source.id;
     }
 
     // Find "New" status
@@ -136,7 +134,7 @@ export async function POST(request: NextRequest) {
         name: data.name,
         email: data.email || null,
         phone: data.phone || null,
-        service: data.service || null,
+        service: data.service || "General Inquiry",
         notes: data.message || null,
         sourceId,
         statusId: newStatus?.id || null,
@@ -150,31 +148,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Log activity
-    const fallbackUser = await db.user.findFirst({ select: { id: true } });
-    if (fallbackUser) {
-      await db.activity.create({
-        data: {
-          type: "NOTE",
-          subject: "Lead captured via public form",
-          description: data.message || null,
-          leadId: lead.id,
-          customerId: customer.id,
-          userId: fallbackUser.id,
-        },
-      });
+    // Log activity if admin/user exists
+    try {
+      const fallbackUser = await db.user.findFirst({ select: { id: true } });
+      if (fallbackUser) {
+        await db.activity.create({
+          data: {
+            type: "NOTE",
+            subject: "Lead captured via website form",
+            description: data.message || null,
+            leadId: lead.id,
+            customerId: customer.id,
+            userId: fallbackUser.id,
+          },
+        });
+      }
+    } catch (actError) {
+      console.warn("Optional activity creation skipped:", actError);
     }
 
     return NextResponse.json({ success: true, leadId: lead.id }, { headers: corsHeaders });
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
+    console.error("POST /api/public/lead error:", error);
+
+    if (error && typeof error === "object" && "issues" in error) {
+      const zodErr = error as z.ZodError;
       return NextResponse.json(
-        { error: JSON.parse(error.message)[0].message },
+        { error: zodErr.issues[0]?.message || "Invalid input data" },
         { status: 400, headers: corsHeaders }
       );
     }
+
+    const message = error instanceof Error ? error.message : "Submission failed";
     return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
+      { error: "Something went wrong. Please try again.", details: process.env.NODE_ENV !== "production" ? message : undefined },
       { status: 500, headers: corsHeaders }
     );
   }

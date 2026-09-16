@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { leadStatusUpdateSchema } from "@/lib/validations/lead";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(
   _request: NextRequest,
@@ -11,8 +12,12 @@ export async function GET(
   const authResult = await requirePermission("leads.view");
   if (authResult.error) return authResult.error;
   const { id } = await params;
+  const ctx = buildCtx(authResult.user);
   const statuses = await db.leadStatus.findMany({ orderBy: { sortOrder: "asc" } });
-  const lead = await db.lead.findUnique({ where: { id }, select: { statusId: true } });
+  const lead = await db.lead.findFirst({
+    where: mergeScope({ id }, scopeFilter(ctx, "lead")),
+    select: { statusId: true },
+  });
 
   if (!lead) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
@@ -32,7 +37,10 @@ export async function POST(
     const body = await request.json();
     const { statusId } = leadStatusUpdateSchema.parse(body);
 
-    const existing = await db.lead.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.lead.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "lead")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }

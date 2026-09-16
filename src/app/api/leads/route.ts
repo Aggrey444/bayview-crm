@@ -4,6 +4,7 @@ import { leadSchema, leadSearchSchema } from "@/lib/validations/lead";
 import { notifyNewLead } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
   const authResult = await requirePermission("leads.view");
@@ -36,9 +37,12 @@ export async function GET(request: NextRequest) {
   if (assignedToId) where.assignedToId = assignedToId;
   if (priority) where.priority = priority;
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "lead"));
+
   const [leads, total] = await Promise.all([
     db.lead.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -50,7 +54,7 @@ export async function GET(request: NextRequest) {
         _count: { select: { activities: true, followUps: true, bookings: true } },
       },
     }),
-    db.lead.count({ where }),
+    db.lead.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({
@@ -97,6 +101,11 @@ export async function POST(request: NextRequest) {
         where: { name: "New" },
       });
       if (newStatus) cleaned.statusId = newStatus.id;
+    }
+
+    // Non view-all users must be able to see what they created
+    if (!authResult.user.role?.viewAllData && !cleaned.assignedToId) {
+      cleaned.assignedToId = authResult.user.id;
     }
 
     const lead = await db.lead.create({ data: cleaned });

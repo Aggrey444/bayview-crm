@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { messageSchema } from "@/lib/validations/message";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(
   _request: NextRequest,
@@ -13,8 +14,9 @@ export async function GET(
 
   const { id } = await params;
 
-  const message = await db.message.findUnique({
-    where: { id },
+  const ctx = buildCtx(authResult.user);
+  const message = await db.message.findFirst({
+    where: mergeScope({ id }, scopeFilter(ctx, "message")),
     include: {
       customer: { select: { id: true, name: true, email: true } },
       sender: { select: { id: true, name: true } },
@@ -41,7 +43,10 @@ export async function PUT(
     const body = await request.json();
     const data = messageSchema.parse(body);
 
-    const existing = await db.message.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.message.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "message")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
@@ -89,7 +94,10 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await db.message.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.message.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "message")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }

@@ -1,7 +1,15 @@
 import { db } from "@/lib/prisma";
 import type { PaymentSearchParams } from "@/lib/validations/payment";
+import {
+  type AccessContext,
+  scopeFilter,
+  mergeScope,
+} from "@/lib/queries/access";
 
-export async function getPayments(params: PaymentSearchParams) {
+export async function getPayments(
+  params: PaymentSearchParams,
+  ctx?: AccessContext,
+) {
   const { q, status, bookingId, page, limit } = params;
   const skip = (page - 1) * limit;
 
@@ -16,9 +24,13 @@ export async function getPayments(params: PaymentSearchParams) {
     ];
   }
 
+  const finalWhere = ctx
+    ? mergeScope(where, scopeFilter(ctx, "payment"))
+    : where;
+
   const [payments, total] = await Promise.all([
     db.payment.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -32,7 +44,7 @@ export async function getPayments(params: PaymentSearchParams) {
         },
       },
     }),
-    db.payment.count({ where }),
+    db.payment.count({ where: finalWhere }),
   ]);
 
   return {
@@ -44,9 +56,13 @@ export async function getPayments(params: PaymentSearchParams) {
   };
 }
 
-export async function getPaymentById(id: string) {
-  return db.payment.findUnique({
-    where: { id },
+export async function getPaymentById(id: string, ctx?: AccessContext) {
+  const where = ctx
+    ? mergeScope({ id }, scopeFilter(ctx, "payment"))
+    : { id };
+
+  return db.payment.findFirst({
+    where,
     include: {
       booking: {
         include: {

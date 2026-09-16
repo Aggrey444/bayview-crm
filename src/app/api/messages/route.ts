@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { messageSchema, messageSearchSchema } from "@/lib/validations/message";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function GET(request: NextRequest) {
   const authResult = await requirePermission("messages.view");
@@ -30,9 +31,12 @@ export async function GET(request: NextRequest) {
   if (channel) where.channel = channel;
   if (customerId) where.customerId = customerId;
 
+  const ctx = buildCtx(authResult.user);
+  const finalWhere = mergeScope(where, scopeFilter(ctx, "message"));
+
   const [messages, total] = await Promise.all([
     db.message.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -42,7 +46,7 @@ export async function GET(request: NextRequest) {
         assignedTo: { select: { id: true, name: true } },
       },
     }),
-    db.message.count({ where }),
+    db.message.count({ where: finalWhere }),
   ]);
 
   return NextResponse.json({

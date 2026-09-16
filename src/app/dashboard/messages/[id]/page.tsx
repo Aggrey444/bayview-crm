@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
@@ -16,8 +17,9 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const session = await auth();
   const { id } = await params;
-  const message = await getMessageById(id);
+  const message = await getMessageById(id, buildCtx(session?.user ?? { id: "", role: null }));
   return { title: message ? `Message — ${message.subject || "No Subject"}` : "Message Not Found" };
 }
 
@@ -33,8 +35,10 @@ export default async function MessageDetailPage({ params }: Props) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
+  const ctx = buildCtx(session.user);
+
   const { id } = await params;
-  const message = await getMessageById(id);
+  const message = await getMessageById(id, ctx);
   if (!message) notFound();
 
   return (

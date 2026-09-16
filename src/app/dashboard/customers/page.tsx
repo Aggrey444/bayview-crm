@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { CustomerList } from "@/components/customers/customer-list";
@@ -23,12 +24,14 @@ export default async function CustomersPage({
     );
   }
 
+  const ctx = buildCtx(session.user);
+
   const params = await searchParams;
   const q = params.q || "";
   const serviceId = params.serviceId || "";
   const page = Number(params.page) || 1;
 
-  const data = await getCustomers({ q, serviceId: serviceId || undefined, page, limit: 10 });
+  const data = await getCustomers({ q, serviceId: serviceId || undefined, page, limit: 10 }, ctx);
 
   return (
     <div className="space-y-6">

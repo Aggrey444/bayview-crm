@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function PATCH(
   request: NextRequest,
@@ -14,7 +15,10 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const existing = await db.followUp.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.followUp.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "followUp")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Follow-up not found" }, { status: 404 });
     }
@@ -66,7 +70,10 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existing = await db.followUp.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.followUp.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "followUp")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Follow-up not found" }, { status: 404 });
     }

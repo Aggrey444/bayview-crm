@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { notifyLeadAssigned } from "@/lib/notifications";
 import { requirePermission } from "@/lib/auth-helpers";
 import { auditLog } from "@/lib/audit";
+import { buildCtx, scopeFilter, mergeScope } from "@/lib/queries/access";
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +23,10 @@ export async function POST(
       );
     }
 
-    const existing = await db.lead.findUnique({ where: { id } });
+    const ctx = buildCtx(authResult.user);
+    const existing = await db.lead.findFirst({
+      where: mergeScope({ id }, scopeFilter(ctx, "lead")),
+    });
     if (!existing) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }

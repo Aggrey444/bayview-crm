@@ -1,8 +1,17 @@
 import { db } from "@/lib/prisma";
 import type { LeadSearchParams } from "@/lib/validations/lead";
+import {
+  type AccessContext,
+  scopeFilter,
+  mergeScope,
+} from "@/lib/queries/access";
 
-export async function getLeads(params: LeadSearchParams) {
-  const { q, statusId, sourceId, assignedToId, priority, page, limit } = params;
+export async function getLeads(
+  params: LeadSearchParams,
+  ctx?: AccessContext,
+) {
+  const { q, statusId, sourceId, assignedToId, priority, page, limit } =
+    params;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
@@ -19,9 +28,13 @@ export async function getLeads(params: LeadSearchParams) {
   if (assignedToId) where.assignedToId = assignedToId;
   if (priority) where.priority = priority;
 
+  const finalWhere = ctx
+    ? mergeScope(where, scopeFilter(ctx, "lead"))
+    : where;
+
   const [leads, total] = await Promise.all([
     db.lead.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -33,7 +46,7 @@ export async function getLeads(params: LeadSearchParams) {
         _count: { select: { activities: true, followUps: true, bookings: true } },
       },
     }),
-    db.lead.count({ where }),
+    db.lead.count({ where: finalWhere }),
   ]);
 
   return {
@@ -45,9 +58,13 @@ export async function getLeads(params: LeadSearchParams) {
   };
 }
 
-export async function getLeadById(id: string) {
-  return db.lead.findUnique({
-    where: { id },
+export async function getLeadById(id: string, ctx?: AccessContext) {
+  const where = ctx
+    ? mergeScope({ id }, scopeFilter(ctx, "lead"))
+    : { id };
+
+  return db.lead.findFirst({
+    where,
     include: {
       source: true,
       status: true,
@@ -73,11 +90,14 @@ export async function getLeadById(id: string) {
   });
 }
 
-export async function getPipelineData() {
+export async function getPipelineData(ctx?: AccessContext) {
   const statuses = await db.leadStatus.findMany({
     orderBy: { sortOrder: "asc" },
     include: {
       leads: {
+        where: ctx
+          ? { assignedToId: ctx.userId }
+          : {},
         orderBy: { createdAt: "desc" },
         include: {
           source: true,

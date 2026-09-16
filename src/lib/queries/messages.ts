@@ -1,7 +1,15 @@
 import { db } from "@/lib/prisma";
 import type { MessageSearchParams } from "@/lib/validations/message";
+import {
+  type AccessContext,
+  scopeFilter,
+  mergeScope,
+} from "@/lib/queries/access";
 
-export async function getMessages(params: MessageSearchParams) {
+export async function getMessages(
+  params: MessageSearchParams,
+  ctx?: AccessContext,
+) {
   const { q, channel, customerId, page, limit } = params;
   const skip = (page - 1) * limit;
 
@@ -15,9 +23,13 @@ export async function getMessages(params: MessageSearchParams) {
   if (channel) where.channel = channel;
   if (customerId) where.customerId = customerId;
 
+  const finalWhere = ctx
+    ? mergeScope(where, scopeFilter(ctx, "message"))
+    : where;
+
   const [messages, total] = await Promise.all([
     db.message.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -26,7 +38,7 @@ export async function getMessages(params: MessageSearchParams) {
         sender: { select: { id: true, name: true } },
       },
     }),
-    db.message.count({ where }),
+    db.message.count({ where: finalWhere }),
   ]);
 
   return {
@@ -38,9 +50,13 @@ export async function getMessages(params: MessageSearchParams) {
   };
 }
 
-export async function getMessageById(id: string) {
-  return db.message.findUnique({
-    where: { id },
+export async function getMessageById(id: string, ctx?: AccessContext) {
+  const where = ctx
+    ? mergeScope({ id }, scopeFilter(ctx, "message"))
+    : { id };
+
+  return db.message.findFirst({
+    where,
     include: {
       customer: { select: { id: true, name: true, email: true } },
       sender: { select: { id: true, name: true } },

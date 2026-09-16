@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -33,14 +34,16 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
+  const ctx = buildCtx(session.user);
+
   const [stats, recentLeads, followUps, recentBookings, recentPayments, sourceSummary] =
     await Promise.all([
-      getDashboardStats(),
-      getRecentLeads(5),
-      getFollowUpsDue(5),
-      getRecentBookings(5),
-      getRecentPayments(5),
-      getLeadSourceSummary(),
+      getDashboardStats(ctx),
+      getRecentLeads(5, ctx),
+      getFollowUpsDue(5, ctx),
+      getRecentBookings(5, ctx),
+      getRecentPayments(5, ctx),
+      getLeadSourceSummary(ctx),
     ]);
 
   const greeting = (() => {

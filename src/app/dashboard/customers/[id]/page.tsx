@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { buildCtx } from "@/lib/queries/access";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -16,8 +17,9 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const session = await auth();
   const { id } = await params;
-  const customer = await getCustomerById(id);
+  const customer = await getCustomerById(id, buildCtx(session?.user ?? { id: "", role: null }));
   return { title: customer ? `${customer.name} — Customers` : "Customer Not Found" };
 }
 
@@ -40,8 +42,10 @@ export default async function CustomerDetailPage({ params }: Props) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
+  const ctx = buildCtx(session.user);
+
   const { id } = await params;
-  const customer = await getCustomerById(id);
+  const customer = await getCustomerById(id, ctx);
   if (!customer) notFound();
 
   return (
