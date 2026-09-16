@@ -11,10 +11,18 @@ import { WhatsAppButton } from "@/components/landing/WhatsAppButton"
 import { InquiryDialog } from "@/components/landing/InquiryDialog"
 import { Toaster } from "@/components/ui/toaster"
 import { getWebsiteContent } from "@/lib/website-content"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
+  const headersList = await headers()
+  const host = headersList.get("host") || ""
+  if (host.startsWith("crm.")) {
+    redirect("/dashboard")
+  }
+
   const content = await getWebsiteContent()
 
   return (

@@ -22,6 +22,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const host = request.headers.get("host") || "";
+  const isCrmSubdomain = host.startsWith("crm.");
+
+  // If visiting the CRM subdomain root, redirect directly to CRM dashboard/login
+  if (isCrmSubdomain && pathname === "/") {
+    return NextResponse.redirect(new URL(isLoggedIn ? "/dashboard" : "/auth/login", request.nextUrl));
+  }
+
   if (isOnAuth && isLoggedIn) {
     return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
   }
