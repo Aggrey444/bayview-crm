@@ -29,6 +29,7 @@ interface NavItem {
   href: string;
   icon: typeof LayoutDashboard;
   permission: string;
+  adminOnly?: boolean;
 }
 
 const topNavItems: NavItem[] = [
@@ -54,7 +55,7 @@ const communicationNavItems: NavItem[] = [
 ];
 
 const systemNavItems: NavItem[] = [
-  { title: "Website Management", href: "/dashboard/website", icon: Globe, permission: "settings.view" },
+  { title: "Website Management", href: "/dashboard/website", icon: Globe, permission: "settings.view", adminOnly: true },
   { title: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "reports.view" },
   { title: "Audit Log", href: "/dashboard/audit", icon: Shield, permission: "audit.view" },
   { title: "Users", href: "/dashboard/users", icon: UserCog, permission: "users.view" },
@@ -67,12 +68,15 @@ interface SidebarNavGroupProps {
   pathname: string;
   collapsed: boolean;
   permissions: string[];
+  userRole?: string | null;
 }
 
-function SidebarNavGroup({ items, pathname, collapsed, permissions }: SidebarNavGroupProps) {
-  const visibleItems = items.filter(
-    (item) => !item.permission || permissions.includes(item.permission)
-  );
+function SidebarNavGroup({ items, pathname, collapsed, permissions, userRole }: SidebarNavGroupProps) {
+  const isAdmin = userRole?.toLowerCase() === "admin";
+  const visibleItems = items.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    return !item.permission || permissions.includes(item.permission);
+  });
 
   if (visibleItems.length === 0) return null;
 
@@ -126,9 +130,10 @@ interface SidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
   permissions?: string[];
+  userRole?: string | null;
 }
 
-export function Sidebar({ collapsed = false, onToggle, permissions = [] }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggle, permissions = [], userRole }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -182,19 +187,19 @@ export function Sidebar({ collapsed = false, onToggle, permissions = [] }: Sideb
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <SidebarNavGroup items={topNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+        <SidebarNavGroup items={topNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} userRole={userRole} />
 
         <SectionLabel collapsed={collapsed}>CRM</SectionLabel>
-        <SidebarNavGroup items={crmNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+        <SidebarNavGroup items={crmNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} userRole={userRole} />
 
         <SectionLabel collapsed={collapsed}>Operations</SectionLabel>
-        <SidebarNavGroup items={taskNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+        <SidebarNavGroup items={taskNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} userRole={userRole} />
 
         <SectionLabel collapsed={collapsed}>Communication</SectionLabel>
-        <SidebarNavGroup items={communicationNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+        <SidebarNavGroup items={communicationNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} userRole={userRole} />
 
         <SectionLabel collapsed={collapsed}>System</SectionLabel>
-        <SidebarNavGroup items={systemNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} />
+        <SidebarNavGroup items={systemNavItems} pathname={pathname} collapsed={collapsed} permissions={permissions} userRole={userRole} />
       </nav>
 
       {!collapsed && (

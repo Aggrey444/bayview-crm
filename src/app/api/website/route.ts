@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getWebsiteContent, saveWebsiteContent, type WebsiteContent } from "@/lib/website-content"
-import { requireAuth } from "@/lib/auth-helpers"
+import { requireAdmin } from "@/lib/auth-helpers"
 import { auditLog } from "@/lib/audit"
 
 export async function GET() {
@@ -9,8 +9,8 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const authResult = await requireAuth()
-  if ("error" in authResult && authResult.error) return authResult.error
+  const authResult = await requireAdmin()
+  if (authResult.error) return authResult.error
 
   try {
     const body = (await request.json()) as WebsiteContent

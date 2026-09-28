@@ -33,6 +33,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/follow-ups": "Follow-ups",
   "/dashboard/audit": "Audit Log",
   "/dashboard/roles": "Roles",
+  "/dashboard/website": "Website Management",
 };
 
 interface HeaderProps {

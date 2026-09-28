@@ -10,6 +10,9 @@ interface DashboardShellProps {
   user?: {
     name?: string | null;
     email?: string | null;
+    role?: {
+      name?: string | null;
+    } | null;
   } | null;
   permissions?: string[];
 }
@@ -17,6 +20,7 @@ interface DashboardShellProps {
 export function DashboardShell({ children, user, permissions = [] }: DashboardShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const userRole = user?.role?.name ?? null;
 
   const toggleMobile = useCallback(() => {
     setMobileOpen((prev) => !prev);
@@ -30,13 +34,14 @@ export function DashboardShell({ children, user, permissions = [] }: DashboardSh
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           permissions={permissions}
+          userRole={userRole}
         />
       </div>
 
       {/* Mobile sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <Sidebar collapsed={false} onToggle={toggleMobile} permissions={permissions} />
+          <Sidebar collapsed={false} onToggle={toggleMobile} permissions={permissions} userRole={userRole} />
         </SheetContent>
       </Sheet>
 
