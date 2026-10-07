@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const result = await getTasks({
     ...parsed.data,
     currentUserId: authResult.user.id,
-    canViewAll: authResult.user.role?.viewAllData ?? false,
+    canViewAll: true, // Global shared task visibility
   });
 
   return NextResponse.json(result);
@@ -43,12 +43,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = taskSchema.parse(body);
 
+    const parseDate = (d?: string | null) => {
+      if (!d) return null;
+      const parsed = new Date(d);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    };
+
     const task = await db.task.create({
       data: {
         title: data.title,
         description: data.description || null,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: data.startDate ? new Date(data.startDate) : null,
+        dueDate: parseDate(data.dueDate),
+        startDate: parseDate(data.startDate),
         priority: data.priority,
         status: data.status,
         completedAt: data.status === "COMPLETED" ? new Date() : null,
@@ -97,7 +103,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("POST /api/tasks error:", error);
     if (error && typeof error === "object" && "name" in error && error.name === "ZodError") {
-      return NextResponse.json({ error: "Validation failed", details: error }, { status: 400 });
+      const zodErr = error as any;
+      const firstMsg = zodErr.issues?.[0]?.message || "Validation failed";
+      return NextResponse.json({ error: firstMsg, details: error }, { status: 400 });
     }
     return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
   }

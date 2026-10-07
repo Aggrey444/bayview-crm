@@ -25,14 +25,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    if (
-      !authResult.user.role?.viewAllData &&
-      existing.assignedToId !== authResult.user.id &&
-      existing.createdById !== authResult.user.id
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
     const updated = await db.task.update({
       where: { id },
       data: {

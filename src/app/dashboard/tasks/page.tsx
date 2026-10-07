@@ -57,7 +57,7 @@ export default async function TasksPage() {
         initialTasks={initialTasks}
         currentUserId={session.user.id}
         teamMembers={users}
-        canViewAll={session.user.role?.viewAllData ?? false}
+        canViewAll={true}
       />
     </div>
   );

@@ -35,7 +35,7 @@ export function TaskList({
   canViewAll = false,
 }: TaskListProps) {
   const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
-  const [activeTab, setActiveTab] = useState<"all" | "mine" | "created" | "completed">("mine");
+  const [activeTab, setActiveTab] = useState<"all" | "mine" | "created" | "completed">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");

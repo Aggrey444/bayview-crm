@@ -23,15 +23,6 @@ export async function GET(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  // Check data isolation if user cannot view all data
-  if (
-    !authResult.user.role?.viewAllData &&
-    task.assignedTo?.id !== authResult.user.id &&
-    task.createdBy.id !== authResult.user.id
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
   return NextResponse.json(task);
 }
 
@@ -52,19 +43,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    if (
-      !authResult.user.role?.viewAllData &&
-      existing.assignedToId !== authResult.user.id &&
-      existing.createdById !== authResult.user.id
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const parseDate = (d?: string | null) => {
+      if (!d) return null;
+      const parsed = new Date(d);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    };
 
     const updateData: Record<string, unknown> = {};
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description || null;
-    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-    if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate) : null;
+    if (data.dueDate !== undefined) updateData.dueDate = parseDate(data.dueDate);
+    if (data.startDate !== undefined) updateData.startDate = parseDate(data.startDate);
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.status !== undefined) {
       updateData.status = data.status;
@@ -121,6 +110,11 @@ export async function PATCH(
     return NextResponse.json(updated);
   } catch (error) {
     console.error("PATCH /api/tasks/[id] error:", error);
+    if (error && typeof error === "object" && "name" in error && error.name === "ZodError") {
+      const zodErr = error as any;
+      const firstMsg = zodErr.issues?.[0]?.message || "Validation failed";
+      return NextResponse.json({ error: firstMsg, details: error }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
   }
 }
@@ -137,13 +131,6 @@ export async function DELETE(
     const existing = await db.task.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
-    if (
-      !authResult.user.role?.viewAllData &&
-      existing.createdById !== authResult.user.id
-    ) {
-      return NextResponse.json({ error: "Unauthorized to delete this task" }, { status: 403 });
     }
 
     await db.task.delete({ where: { id } });

@@ -40,11 +40,11 @@ const scopes: Record<
 };
 
 export function scopeFilter(
-  ctx: AccessContext,
-  module: AccessModule,
+  _ctx: AccessContext,
+  _module: AccessModule,
 ): Record<string, unknown> {
-  if (ctx.canViewAll) return {};
-  return scopes[module](ctx.userId);
+  // All CRM data (customers, leads, bookings, payments, activities) is global for all authenticated team members
+  return {};
 }
 
 export function mergeScope(
@@ -64,6 +64,6 @@ export function buildCtx(user: {
 }): AccessContext {
   return {
     userId: user.id,
-    canViewAll: user.role?.viewAllData ?? false,
+    canViewAll: true, // Global shared data access across all resort staff & managers
   };
 }

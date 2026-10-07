@@ -138,9 +138,24 @@ export default {
           });
         }
 
-        const permissions = user.role?.permissions.map(
+        let permissions = user.role?.permissions.map(
           (rp) => rp.permission.key
         ) ?? [];
+
+        // If newly created or role has no permissions, grant default operational permissions so user is never locked out
+        if (permissions.length === 0) {
+          permissions = [
+            "leads.view", "leads.create", "leads.edit",
+            "customers.view", "customers.create", "customers.edit",
+            "bookings.view", "bookings.create", "bookings.edit",
+            "payments.view", "payments.create", "payments.edit",
+            "followUps.view", "followUps.create", "followUps.edit",
+            "activities.view", "activities.create", "activities.edit",
+            "tasks.view", "tasks.create", "tasks.edit",
+            "messages.view", "messages.create",
+            "settings.view",
+          ];
+        }
 
         return {
           id: user.id,
@@ -150,9 +165,13 @@ export default {
             ? {
                 id: user.role.id,
                 name: user.role.name,
-                viewAllData: user.role.viewAllData,
+                viewAllData: true, // Always global
               }
-            : null,
+            : {
+                id: "staff-role",
+                name: "Staff",
+                viewAllData: true,
+              },
           permissions,
         };
       },
@@ -166,27 +185,33 @@ export default {
           | { id: string; name: string; viewAllData: boolean }
           | null
           | undefined;
-        if (role) {
-          token.roleId = role.id;
-          token.roleName = role.name;
-          token.viewAllData = role.viewAllData;
-        }
-        token.permissions = user.permissions ?? [];
+        token.roleId = role?.id || "staff-role";
+        token.roleName = role?.name || "Staff";
+        token.viewAllData = true; // Always global across all team members
+        token.permissions = (user.permissions && user.permissions.length > 0)
+          ? user.permissions
+          : [
+              "leads.view", "leads.create", "leads.edit",
+              "customers.view", "customers.create", "customers.edit",
+              "bookings.view", "bookings.create", "bookings.edit",
+              "payments.view", "payments.create", "payments.edit",
+              "followUps.view", "followUps.create", "followUps.edit",
+              "activities.view", "activities.create", "activities.edit",
+              "tasks.view", "tasks.create", "tasks.edit",
+              "messages.view", "messages.create",
+              "settings.view",
+            ];
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        if (token.roleId) {
-          session.user.role = {
-            id: token.roleId,
-            name: token.roleName as string,
-            viewAllData: token.viewAllData as boolean,
-          };
-        } else {
-          session.user.role = null;
-        }
+        session.user.role = {
+          id: (token.roleId as string) || "staff-role",
+          name: (token.roleName as string) || "Staff",
+          viewAllData: true, // Always global
+        };
         session.user.permissions = (token.permissions as string[]) ?? [];
       }
       return session;

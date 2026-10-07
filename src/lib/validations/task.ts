@@ -2,15 +2,15 @@ import { z } from "zod";
 
 export const taskSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title is too long"),
-  description: z.string().max(5000, "Description is too long").optional().or(z.literal("")),
-  dueDate: z.string().optional().or(z.literal("")),
-  startDate: z.string().optional().or(z.literal("")),
+  description: z.string().max(5000, "Description is too long").nullable().optional().or(z.literal("")),
+  dueDate: z.string().nullable().optional().or(z.literal("")),
+  startDate: z.string().nullable().optional().or(z.literal("")),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
   status: z.enum(["TODO", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).default("TODO"),
-  assignedToId: z.string().optional().or(z.literal("")),
-  leadId: z.string().optional().or(z.literal("")),
-  customerId: z.string().optional().or(z.literal("")),
-  bookingId: z.string().optional().or(z.literal("")),
+  assignedToId: z.string().nullable().optional().or(z.literal("")),
+  leadId: z.string().nullable().optional().or(z.literal("")),
+  customerId: z.string().nullable().optional().or(z.literal("")),
+  bookingId: z.string().nullable().optional().or(z.literal("")),
 });
 
 export type TaskInput = z.infer<typeof taskSchema>;

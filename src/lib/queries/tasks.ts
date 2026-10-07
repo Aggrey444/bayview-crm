@@ -18,7 +18,7 @@ export async function getTasks(params: GetTasksOptions) {
     page = 1,
     limit = 50,
     currentUserId,
-    canViewAll = false,
+    canViewAll = true,
   } = params;
 
   const skip = (page - 1) * limit;
