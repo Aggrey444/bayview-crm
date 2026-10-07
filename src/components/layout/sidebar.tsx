@@ -21,6 +21,7 @@ import {
   Shield,
   Send,
   Globe,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +40,7 @@ const topNavItems: NavItem[] = [
 const crmNavItems: NavItem[] = [
   { title: "Leads", href: "/dashboard/leads", icon: UserPlus, permission: "leads.view" },
   { title: "Customers", href: "/dashboard/customers", icon: Users, permission: "customers.view" },
+  { title: "Entrance QR Code", href: "/dashboard/guest-qr", icon: QrCode, permission: "leads.view" },
   { title: "Follow-ups", href: "/dashboard/follow-ups", icon: Clock, permission: "followUps.view" },
   { title: "Bookings", href: "/dashboard/bookings", icon: CalendarCheck, permission: "bookings.view" },
   { title: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "payments.view" },

@@ -16,6 +16,26 @@ export const customerSchema = z.object({
     .array(z.string())
     .min(1, "At least one service must be selected")
     .optional(),
+  servicePrices: z.record(z.string(), z.number()).optional(),
+  bookingDetails: z
+    .object({
+      propertyName: z.string().optional(),
+      roomNumber: z.string().optional(),
+      checkInDate: z.string().optional(),
+      checkOutDate: z.string().optional(),
+      guests: z.coerce.number().optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
+  paymentDetails: z
+    .object({
+      paymentStatus: z.enum(["PAID", "PENDING", "NONE"]).optional(),
+      paymentMethod: z.enum(["CASH", "CARD", "BANK_TRANSFER", "ONLINE", "OTHER"]).optional(),
+      amountPaid: z.coerce.number().optional(),
+      paymentReference: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type CustomerInput = z.infer<typeof customerSchema>;

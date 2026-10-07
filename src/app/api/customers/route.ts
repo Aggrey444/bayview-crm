@@ -97,13 +97,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const serviceIds = data.serviceIds || body.serviceIds || [];
+    const rawServiceIds: string[] = data.serviceIds || body.serviceIds || [];
+    const servicePrices: Record<string, number> = data.servicePrices || body.servicePrices || {};
+
+    // Resolve any "default-" services so they have real database records
+    const resolvedServiceRecords: Array<{ id: string; name: string; price: number }> = [];
+    for (const rawId of rawServiceIds) {
+      if (rawId.startsWith("default-")) {
+        const serviceName = rawId.replace("default-", "");
+        try {
+          const upserted = await db.service.upsert({
+            where: { name: serviceName },
+            update: {},
+            create: {
+              name: serviceName,
+              price: servicePrices[rawId] !== undefined ? servicePrices[rawId] : undefined,
+            },
+          });
+          resolvedServiceRecords.push({
+            id: upserted.id,
+            name: upserted.name,
+            price: servicePrices[rawId] ?? Number(upserted.price ?? 0),
+          });
+        } catch (err) {
+          console.warn("Failed to upsert default service:", serviceName, err);
+        }
+      } else {
+        const dbService = await db.service.findUnique({ where: { id: rawId } });
+        if (dbService) {
+          resolvedServiceRecords.push({
+            id: dbService.id,
+            name: dbService.name,
+            price: servicePrices[rawId] ?? Number(dbService.price ?? 0),
+          });
+        }
+      }
+    }
+
+    const finalServiceIds = resolvedServiceRecords.map((s) => s.id);
 
     const customer = await db.customer.create({
       data: {
         ...cleaned,
-        services: serviceIds.length > 0
-          ? { connect: serviceIds.map((id: string) => ({ id })) }
+        services: finalServiceIds.length > 0
+          ? { connect: finalServiceIds.map((id: string) => ({ id })) }
           : undefined,
       },
       include: {
@@ -111,12 +148,77 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Calculate total price from selected services
+    let totalAmount = 0;
+    const serviceBreakdownLines: string[] = [];
+    for (const s of resolvedServiceRecords) {
+      const price = Number(s.price || 0);
+      totalAmount += price;
+      serviceBreakdownLines.push(`• ${s.name}: GHS ${price.toFixed(2)}`);
+    }
+
+    const serviceBreakdown = serviceBreakdownLines.length > 0
+      ? `Subscribed Services:\n${serviceBreakdownLines.join("\n")}`
+      : "";
+
+    // Automatically create Booking/Order if services were chosen
+    if (resolvedServiceRecords.length > 0) {
+      const bDetails = data.bookingDetails;
+      const pDetails = data.paymentDetails;
+
+      const serviceNames = resolvedServiceRecords.map((s) => s.name).join(", ");
+      const checkInDate = bDetails?.checkInDate ? new Date(bDetails.checkInDate) : new Date();
+      const checkOutDate = bDetails?.checkOutDate ? new Date(bDetails.checkOutDate) : new Date();
+
+      const bookingNotes = [
+        serviceBreakdown,
+        bDetails?.notes ? `Reservation Notes: ${bDetails.notes}` : "",
+      ].filter(Boolean).join("\n\n");
+
+      const booking = await db.booking.create({
+        data: {
+          customerId: customer.id,
+          propertyName: bDetails?.propertyName || "Bayview Village",
+          service: serviceNames,
+          roomNumber: bDetails?.roomNumber || null,
+          checkInDate,
+          checkOutDate,
+          guests: bDetails?.guests ? Number(bDetails.guests) : 1,
+          status: pDetails?.paymentStatus === "PAID" ? "CONFIRMED" : "PENDING",
+          totalAmount,
+          notes: bookingNotes,
+          createdById: authResult.user.id,
+          assignedToId: cleaned.assignedToId || authResult.user.id,
+        },
+      });
+
+      // If marked as paid, record immediate Payment
+      if (pDetails?.paymentStatus === "PAID") {
+        const amountPaid = pDetails.amountPaid !== undefined && pDetails.amountPaid !== null
+          ? Number(pDetails.amountPaid)
+          : totalAmount;
+
+        await db.payment.create({
+          data: {
+            bookingId: booking.id,
+            amount: amountPaid,
+            currency: "GHS",
+            method: (pDetails.paymentMethod as any) || "CASH",
+            status: "SUCCESSFUL",
+            reference: pDetails.paymentReference || `PAY-${Date.now().toString(36).toUpperCase()}`,
+            paymentDate: new Date(),
+            notes: pDetails.notes || `Initial payment for services: ${serviceNames}`,
+          },
+        });
+      }
+    }
+
     await auditLog({
       userId: authResult.user.id,
       action: "CUSTOMER_CREATED",
       entity: "Customer",
       entityId: customer.id,
-      newValues: { ...cleaned, serviceIds },
+      newValues: { ...cleaned, serviceIds: finalServiceIds, totalAmount },
       request,
     });
 
