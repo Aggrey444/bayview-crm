@@ -18,7 +18,9 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute =
     pathname.startsWith("/lead-capture") ||
     pathname.startsWith("/api/public") ||
-    pathname.startsWith("/welcome");
+    pathname.startsWith("/welcome") ||
+    pathname.startsWith("/review") ||
+    pathname.startsWith("/feedback");
   const isHealthCheck = pathname === "/api/health";
 
   if (isOnApiAuth || isPublicRoute || isHealthCheck) {
