@@ -11,7 +11,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
-import { Search, Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Search, Plus, ChevronLeft, ChevronRight, X, MapPin, Download } from "lucide-react";
 
 type Service = { id: string; name: string };
 type Customer = {
@@ -20,6 +20,8 @@ type Customer = {
   email: string | null;
   phone: string | null;
   company: string | null;
+  address?: string | null;
+  notes?: string | null;
   createdAt: string;
   services: Service[];
   _count: { bookings: number; activities: number; leads: number };
@@ -114,6 +116,51 @@ export function CustomerList({
   }, [query, serviceId, page, fetchCustomers, router, searchParams]);
 
   const activeServiceName = allServices.find((s) => s.id === serviceId)?.name;
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const params = new URLSearchParams();
+      if (query) params.set("q", query);
+      if (serviceId) params.set("serviceId", serviceId);
+      params.set("page", "1");
+      params.set("limit", "1000");
+
+      const res = await fetch(`/api/customers?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch customers for export");
+      const data = await res.json();
+      const exportList: Customer[] = data.customers || customers;
+
+      const header = ["Name", "Phone", "Email", "Company", "Address", "Services", "Created At"];
+      const rows = exportList.map((c) => [
+        `"${(c.name || "").replace(/"/g, '""')}"`,
+        `"${(c.phone || "").replace(/"/g, '""')}"`,
+        `"${(c.email || "").replace(/"/g, '""')}"`,
+        `"${(c.company || "").replace(/"/g, '""')}"`,
+        `"${(c.address || "").replace(/"/g, '""')}"`,
+        `"${(c.services ? c.services.map((s) => s.name).join(", ") : "").replace(/"/g, '""')}"`,
+        `"${c.createdAt || ""}"`,
+      ]);
+
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        encodeURIComponent([header.join(","), ...rows.map((r) => r.join(","))].join("\n"));
+      const link = document.createElement("a");
+      link.setAttribute("href", csvContent);
+      link.setAttribute(
+        "download",
+        `bayview_customers_${activeServiceName ? activeServiceName.toLowerCase().replace(/\s+/g, "_") : "all"}_${Date.now()}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export CSV error:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -121,7 +168,7 @@ export function CustomerList({
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input
-            placeholder="Search by name, email, phone, or company..."
+            placeholder="Search by name, phone, location, email, or company..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -130,10 +177,21 @@ export function CustomerList({
             className="pl-9"
           />
         </div>
-        <Link href="/dashboard/customers/new" className={buttonVariants()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Customer
-        </Link>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            disabled={exporting || customers.length === 0}
+            title="Export customers to CSV"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {exporting ? "Exporting..." : "Export CSV"}
+          </Button>
+          <Link href="/dashboard/customers/new" className={buttonVariants()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Customer
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -219,9 +277,15 @@ export function CustomerList({
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      {c.email && <span className="truncate">{c.email}</span>}
+                    <div className="flex items-center gap-3 text-xs text-zinc-500 flex-wrap">
                       {c.phone && <span>{c.phone}</span>}
+                      {c.email && <span className="truncate">{c.email}</span>}
+                      {c.address && (
+                        <span className="flex items-center gap-1 text-zinc-500">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{c.address}</span>
+                        </span>
+                      )}
                     </div>
                     {c.services.length > 0 && (
                       <div className="flex items-center gap-1 mt-1 flex-wrap">

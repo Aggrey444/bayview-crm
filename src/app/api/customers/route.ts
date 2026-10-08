@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
       { email: { contains: q, mode: "insensitive" } },
       { company: { contains: q, mode: "insensitive" } },
       { phone: { contains: q, mode: "insensitive" } },
+      { address: { contains: q, mode: "insensitive" } },
     ];
   }
 

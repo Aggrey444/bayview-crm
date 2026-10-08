@@ -211,6 +211,62 @@ async function main() {
   }
   console.log(`  Seeded ${services.length} services`);
 
+  // ─── Pool Side Customers ───────────────────────────
+  try {
+    const poolService = await prisma.service.findUnique({
+      where: { name: "Pool Facilities" },
+    });
+
+    if (poolService) {
+      const fs = await import("fs");
+      const path = await import("path");
+      const dataFilePath = path.join(__dirname, "data", "pool_customers.json");
+
+      if (fs.existsSync(dataFilePath)) {
+        const poolCustomers = JSON.parse(fs.readFileSync(dataFilePath, "utf8"));
+        const phones = poolCustomers.map((p: any) => p.phone).filter(Boolean);
+
+        const existingCustomers = await prisma.customer.findMany({
+          where: { phone: { in: phones } },
+          select: { id: true, phone: true },
+        });
+        const existingMap = new Map(existingCustomers.map((c) => [c.phone, c.id]));
+
+        let seededCount = 0;
+        for (const item of poolCustomers) {
+          const existingId = item.phone ? existingMap.get(item.phone) : null;
+          if (existingId) {
+            await prisma.customer.update({
+              where: { id: existingId },
+              data: {
+                address: item.address || undefined,
+                services: {
+                  connect: { id: poolService.id },
+                },
+              },
+            });
+          } else {
+            await prisma.customer.create({
+              data: {
+                name: item.name,
+                phone: item.phone,
+                address: item.address || null,
+                notes: item.notes || "Customer registered from Pool Side records",
+                services: {
+                  connect: { id: poolService.id },
+                },
+              },
+            });
+            seededCount++;
+          }
+        }
+        console.log(`  Seeded pool customers: ${seededCount} new, ${poolCustomers.length} total synced with Pool Facilities`);
+      }
+    }
+  } catch (err) {
+    console.warn("  Warning: Pool customers seed encountered an issue:", err);
+  }
+
   console.log("Seeding complete.");
 }
 
