@@ -74,6 +74,9 @@ export default async function MessageDetailPage({ params }: Props) {
               <Link href={`/dashboard/customers/${message.customer.id}`} className="text-sm font-medium hover:underline">
                 {message.customer.name}
               </Link>
+              {message.customer.phone && (
+                <p className="text-xs text-zinc-400 font-mono mt-0.5">{message.customer.phone}</p>
+              )}
             </div>
           </CardContent>
         </Card>

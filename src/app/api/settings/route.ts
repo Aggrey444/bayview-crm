@@ -16,6 +16,9 @@ const DEFAULTS: Record<string, unknown> = {
   bookingAlerts: true,
   twoFactor: false,
   sessionTimeout: "30",
+  arkeselApiKey: "",
+  arkeselSenderId: "Bayview",
+  arkeselSandbox: false,
 };
 
 const settingsSchema = z.object({
@@ -29,6 +32,9 @@ const settingsSchema = z.object({
   bookingAlerts: z.boolean().optional(),
   twoFactor: z.boolean().optional(),
   sessionTimeout: z.string().optional(),
+  arkeselApiKey: z.string().optional(),
+  arkeselSenderId: z.string().max(11, "Sender ID cannot exceed 11 characters").optional(),
+  arkeselSandbox: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -43,7 +49,17 @@ export async function GET() {
       settings[row.key] = row.value;
     }
 
-    return NextResponse.json(settings);
+    if (!settings.arkeselApiKey && process.env.ARKESEL_API_KEY) {
+      settings.arkeselApiKey = process.env.ARKESEL_API_KEY;
+    }
+    if (!settings.arkeselSenderId && process.env.ARKESEL_SENDER_ID) {
+      settings.arkeselSenderId = process.env.ARKESEL_SENDER_ID;
+    }
+
+    return NextResponse.json({
+      ...settings,
+      hasArkeselApiKey: !!settings.arkeselApiKey,
+    });
   } catch (error) {
     console.error("Failed to fetch settings:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

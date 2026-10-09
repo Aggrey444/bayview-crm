@@ -17,7 +17,7 @@ type Message = {
   channel: string;
   sentAt: string | null;
   createdAt: string;
-  customer: { id: string; name: string; email: string | null };
+  customer: { id: string; name: string; email: string | null; phone?: string | null };
   sender: { id: string; name: string | null } | null;
 };
 
@@ -172,6 +172,7 @@ export function MessageList({
                     </div>
                     <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
                       <span>{m.customer.name}</span>
+                      {m.customer.phone && <span className="text-zinc-400 font-mono">({m.customer.phone})</span>}
                       {m.sender && <span className="text-zinc-400">by {m.sender.name}</span>}
                     </div>
                   </div>

@@ -22,6 +22,13 @@ import {
   Lock,
   Globe,
   CheckCircle2,
+  MessageSquare,
+  Eye,
+  EyeOff,
+  Send,
+  AlertCircle,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 
 interface UserProfile {
@@ -44,7 +51,7 @@ const roleColors: Record<string, string> = {
 };
 
 export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "notifications" | "security" | "system">("system");
+  const [activeTab, setActiveTab] = useState<"general" | "notifications" | "security" | "system" | "sms">("system");
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,6 +61,25 @@ export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
   const [currency, setCurrency] = useState("GHS");
   const [autoBackups, setAutoBackups] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  // Arkesel SMS State
+  const [arkeselApiKey, setArkeselApiKey] = useState("");
+  const [arkeselSenderId, setArkeselSenderId] = useState("Bayview");
+  const [arkeselSandbox, setArkeselSandbox] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceInfo, setBalanceInfo] = useState<{
+    smsBalance?: string | number;
+    mainBalance?: string | number;
+    currency?: string;
+    error?: string;
+    message?: string;
+  } | null>(null);
+
+  // Quick Test SMS
+  const [testPhone, setTestPhone] = useState("");
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Notifications State
   const [emailAlerts, setEmailAlerts] = useState(true);
@@ -81,6 +107,9 @@ export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
           setBookingAlerts(data.bookingAlerts ?? true);
           setTwoFactor(data.twoFactor ?? false);
           if (data.sessionTimeout) setSessionTimeout(data.sessionTimeout);
+          if (data.arkeselApiKey) setArkeselApiKey(data.arkeselApiKey);
+          if (data.arkeselSenderId) setArkeselSenderId(data.arkeselSenderId);
+          if (data.arkeselSandbox !== undefined) setArkeselSandbox(data.arkeselSandbox);
         }
       } catch (error) {
         console.error("Failed to load settings:", error);
@@ -108,6 +137,9 @@ export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
           bookingAlerts,
           twoFactor,
           sessionTimeout,
+          arkeselApiKey,
+          arkeselSenderId,
+          arkeselSandbox,
         }),
       });
       if (res.ok) {
@@ -121,21 +153,95 @@ export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
     }
   }
 
+  async function handleCheckBalance() {
+    setBalanceLoading(true);
+    setBalanceInfo(null);
+    try {
+      const res = await fetch("/api/sms");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBalanceInfo({
+          smsBalance: data.smsBalance,
+          mainBalance: data.mainBalance,
+          currency: data.currency || "GHS",
+          message: data.message,
+        });
+      } else {
+        setBalanceInfo({
+          error: data.message || data.error || "Could not retrieve balance",
+        });
+      }
+    } catch {
+      setBalanceInfo({ error: "Failed to connect to Arkesel server." });
+    } finally {
+      setBalanceLoading(false);
+    }
+  }
+
+  async function handleSendTestSms() {
+    if (!testPhone.trim()) return;
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_test_sms",
+          phone: testPhone,
+          senderId: arkeselSenderId,
+          apiKey: arkeselApiKey,
+          sandbox: arkeselSandbox,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestResult({
+          success: true,
+          message: data.message || `Test SMS sent successfully to ${testPhone}!`,
+        });
+      } else {
+        setTestResult({
+          success: false,
+          message: data.error || data.message || "Failed to send test SMS.",
+        });
+      }
+    } catch {
+      setTestResult({
+        success: false,
+        message: "Network error while sending test SMS.",
+      });
+    } finally {
+      setTestSending(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Settings Tab Header Bar */}
       <div className="flex w-full items-center justify-between border-b border-zinc-200 bg-zinc-50/80 p-1.5 rounded-xl dark:border-zinc-800 dark:bg-zinc-900/60">
-        <div className="grid w-full grid-cols-4 gap-1">
+        <div className="grid w-full grid-cols-2 sm:grid-cols-5 gap-1">
           <button
-            onClick={() => setActiveTab("general")}
+            onClick={() => setActiveTab("system")}
             className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-all ${
-              activeTab === "general"
+              activeTab === "system"
                 ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white font-semibold"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
             }`}
           >
-            <User className="h-4 w-4" />
-            General
+            <SlidersHorizontal className="h-4 w-4" />
+            System
+          </button>
+          <button
+            onClick={() => setActiveTab("sms")}
+            className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-all ${
+              activeTab === "sms"
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white font-semibold"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <MessageSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            SMS (Arkesel)
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
@@ -160,15 +266,15 @@ export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
             Security
           </button>
           <button
-            onClick={() => setActiveTab("system")}
+            onClick={() => setActiveTab("general")}
             className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-all ${
-              activeTab === "system"
+              activeTab === "general"
                 ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white font-semibold"
                 : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
             }`}
           >
-            <SlidersHorizontal className="h-4 w-4" />
-            System
+            <User className="h-4 w-4" />
+            General
           </button>
         </div>
       </div>
@@ -272,6 +378,226 @@ export function SettingsClient({ user, dbStatus }: SettingsClientProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ARKESEL SMS TAB */}
+      {activeTab === "sms" && (
+        <div className="space-y-6">
+          <Card className="border-zinc-200 dark:border-zinc-800 shadow-md">
+            <CardHeader className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600">
+                    <MessageSquare className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold tracking-tight">Arkesel SMS Gateway (Ghana)</CardTitle>
+                    <CardDescription>
+                      Configure your Arkesel API credentials to power single and bulk SMS messaging.
+                    </CardDescription>
+                  </div>
+                </div>
+                <a
+                  href="https://arkesel.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0"
+                >
+                  Visit Arkesel Portal <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6 pt-6">
+              {/* Info banner */}
+              <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                <div className="flex items-start gap-3">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 mt-2 shrink-0 animate-pulse" />
+                  <div className="text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+                      Ghana SMS Integration via Arkesel v2 API
+                    </p>
+                    Bayview Hotel CRM connects directly to <strong className="text-emerald-700 dark:text-emerald-300">sms.arkesel.com</strong> to deliver transactional & promotional SMS messages across MTN, Telecel (Vodafone), AT, and international networks. Your Sender ID must be approved on your Arkesel dashboard.
+                  </div>
+                </div>
+              </div>
+
+              {/* Form fields */}
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="arkeselApiKey" className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                      Arkesel API Key <span className="text-red-500">*</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 inline-flex items-center gap-1"
+                    >
+                      {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showApiKey ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <Input
+                    id="arkeselApiKey"
+                    type={showApiKey ? "text" : "password"}
+                    value={arkeselApiKey}
+                    onChange={(e) => setArkeselApiKey(e.target.value)}
+                    placeholder="Paste your Arkesel API key..."
+                    className="h-11 rounded-xl"
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Found in your Arkesel dashboard under Developer API &gt; API Keys.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="arkeselSenderId" className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    Sender ID <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="arkeselSenderId"
+                    value={arkeselSenderId}
+                    onChange={(e) => setArkeselSenderId(e.target.value.slice(0, 11))}
+                    maxLength={11}
+                    placeholder="Bayview"
+                    className="h-11 rounded-xl uppercase"
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Max 11 alphanumeric characters (e.g. <span className="font-mono font-semibold">BAYVIEW</span>). Must match your approved Sender ID on Arkesel.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sandbox mode */}
+              <div className="flex items-center justify-between py-2 border-t border-zinc-100 dark:border-zinc-800">
+                <div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Sandbox / Test Mode</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Simulate API calls without deducting live SMS credits or delivering messages to phones.
+                  </p>
+                </div>
+                <Switch
+                  checked={arkeselSandbox}
+                  onCheckedChange={setArkeselSandbox}
+                  className="data-[state=checked]:bg-emerald-600"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md shadow-emerald-600/20"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save SMS Configuration"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCheckBalance}
+                  disabled={balanceLoading || !arkeselApiKey}
+                  className="rounded-xl border-zinc-300 dark:border-zinc-700"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${balanceLoading ? "animate-spin" : ""}`} />
+                  {balanceLoading ? "Connecting..." : "Test Connection & Check Balance"}
+                </Button>
+              </div>
+
+              {/* Balance & Status feedback */}
+              {balanceInfo && (
+                <div className={`p-4 rounded-xl border text-sm transition-all ${
+                  balanceInfo.error
+                    ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300"
+                    : "bg-emerald-50/80 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+                }`}>
+                  {balanceInfo.error ? (
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                      <span>{balanceInfo.error}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <span>Connected to Arkesel SMS API successfully!</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-1 max-w-sm">
+                        <div className="bg-white/80 dark:bg-zinc-900/60 p-2.5 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
+                          <p className="text-xs text-zinc-500">SMS Units</p>
+                          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+                            {balanceInfo.smsBalance ?? "Active"}
+                          </p>
+                        </div>
+                        {balanceInfo.mainBalance !== null && (
+                          <div className="bg-white/80 dark:bg-zinc-900/60 p-2.5 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
+                            <p className="text-xs text-zinc-500">Main Balance</p>
+                            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                              {balanceInfo.currency || "GHS"} {balanceInfo.mainBalance}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Test SMS Box */}
+          <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <CardHeader className="border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Send className="h-4 w-4 text-emerald-600" />
+                Send a Test SMS
+              </CardTitle>
+              <CardDescription>
+                Verify that your Arkesel Sender ID and API key can deliver live messages to a phone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Enter phone number (e.g. 0244123456 or +233244123456)"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    className="h-10 rounded-xl"
+                  />
+                </div>
+                <Button
+                  onClick={handleSendTestSms}
+                  disabled={testSending || !testPhone.trim() || !arkeselApiKey}
+                  className="bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold px-4 rounded-xl"
+                >
+                  <Send className={`mr-2 h-4 w-4 ${testSending ? "animate-pulse" : ""}`} />
+                  {testSending ? "Sending..." : "Send Test SMS"}
+                </Button>
+              </div>
+
+              {testResult && (
+                <div
+                  className={`p-3 rounded-xl border text-xs font-medium flex items-center gap-2 ${
+                    testResult.success
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+                      : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300"
+                  }`}
+                >
+                  {testResult.success ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                  )}
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* GENERAL TAB */}

@@ -29,7 +29,7 @@ export default async function EditMessagePage({ params }: Props) {
   if (!message) notFound();
 
   const customers = await db.customer.findMany({
-    select: { id: true, name: true },
+    select: { id: true, name: true, phone: true, email: true },
     orderBy: { name: "asc" },
   });
 

@@ -34,7 +34,7 @@ export async function getMessages(
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
-        customer: { select: { id: true, name: true, email: true } },
+        customer: { select: { id: true, name: true, email: true, phone: true } },
         sender: { select: { id: true, name: true } },
       },
     }),
@@ -58,7 +58,7 @@ export async function getMessageById(id: string, ctx?: AccessContext) {
   return db.message.findFirst({
     where,
     include: {
-      customer: { select: { id: true, name: true, email: true } },
+      customer: { select: { id: true, name: true, email: true, phone: true } },
       sender: { select: { id: true, name: true } },
     },
   });

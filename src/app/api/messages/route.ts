@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
-        customer: { select: { id: true, name: true, email: true } },
+        customer: { select: { id: true, name: true, email: true, phone: true } },
         sender: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
       },
@@ -66,24 +66,72 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = messageSchema.parse(body);
 
+    const customer = await db.customer.findUnique({
+      where: { id: data.customerId },
+      select: { id: true, name: true, phone: true, email: true },
+    });
+
+    if (!customer) {
+      return NextResponse.json({ error: "Selected customer not found" }, { status: 404 });
+    }
+
+    let sentAt = data.sentAt ? new Date(data.sentAt) : null;
+
+    // If channel is SMS, send live via Arkesel
+    if (data.channel === "SMS") {
+      if (!customer.phone) {
+        return NextResponse.json(
+          { error: `Customer "${customer.name}" does not have a phone number on file. Please add a phone number to send SMS.` },
+          { status: 400 }
+        );
+      }
+
+      const { sendArkeselSms } = await import("@/lib/arkesel");
+      const smsResult = await sendArkeselSms({
+        recipients: [customer.phone],
+        message: data.body,
+      });
+
+      if (!smsResult.success) {
+        return NextResponse.json(
+          { error: `Failed to send SMS via Arkesel: ${smsResult.message}` },
+          { status: 400 }
+        );
+      }
+
+      sentAt = new Date();
+    } else if (!sentAt) {
+      sentAt = new Date();
+    }
+
     const cleaned = {
       customerId: data.customerId,
       channel: data.channel,
       subject: data.subject || null,
       body: data.body,
-      sentAt: data.sentAt || null,
+      sentAt,
       senderId: authResult.user.id,
-      assignedToId: (data as Record<string, unknown>).assignedToId as string | undefined || null,
+      assignedToId: ((data as Record<string, unknown>).assignedToId as string | undefined) || null,
     };
 
-    const message = await db.message.create({ data: cleaned });
+    const message = await db.message.create({
+      data: cleaned,
+      include: {
+        customer: { select: { id: true, name: true, phone: true, email: true } },
+        sender: { select: { id: true, name: true } },
+      },
+    });
 
     await auditLog({
       userId: authResult.user.id,
       action: "MESSAGE_CREATED",
       entity: "Message",
       entityId: message.id,
-      newValues: cleaned,
+      newValues: {
+        ...cleaned,
+        channel: data.channel,
+        customerPhone: customer.phone,
+      },
       request,
     });
 
